@@ -2688,17 +2688,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "p3-bn254-fr"
-version = "0.2.2-succinct"
-source = "git+https://github.com/succinctlabs/plonky3-private?branch=min%2Fp3-vuln-fix#e780dafcdbd9560b41e248d061837d3000ebdd15"
+name = "p3-bls12-fr"
+version = "4.2.1"
 dependencies = [
  "ff 0.13.0",
  "num-bigint 0.4.6",
- "p3-field 0.2.2-succinct (git+https://github.com/succinctlabs/plonky3-private?branch=min%2Fp3-vuln-fix)",
- "p3-poseidon2 0.2.2-succinct (git+https://github.com/succinctlabs/plonky3-private?branch=min%2Fp3-vuln-fix)",
- "p3-symmetric 0.2.2-succinct (git+https://github.com/succinctlabs/plonky3-private?branch=min%2Fp3-vuln-fix)",
+ "p3-field",
+ "p3-poseidon2",
+ "p3-symmetric",
  "rand",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -4313,7 +4313,7 @@ dependencies = [
  "itertools 0.13.0",
  "lru",
  "num-bigint 0.4.6",
- "p3-baby-bear 0.2.2-succinct (git+https://github.com/succinctlabs/plonky3-private?branch=min%2Fp3-vuln-fix)",
+ "p3-baby-bear",
  "p3-bn254-fr",
  "p3-challenger",
  "p3-commit",
@@ -4348,7 +4348,7 @@ dependencies = [
  "itertools 0.13.0",
  "num-traits",
  "p3-air",
- "p3-baby-bear 0.2.2-succinct (git+https://github.com/succinctlabs/plonky3-private?branch=min%2Fp3-vuln-fix)",
+ "p3-baby-bear",
  "p3-bn254-fr",
  "p3-challenger",
  "p3-commit",
@@ -4379,10 +4379,10 @@ version = "5.0.0"
 dependencies = [
  "backtrace",
  "itertools 0.13.0",
- "p3-baby-bear 0.2.2-succinct (git+https://github.com/succinctlabs/plonky3-private?branch=min%2Fp3-vuln-fix)",
+ "p3-baby-bear",
  "p3-bn254-fr",
- "p3-field 0.2.2-succinct (git+https://github.com/succinctlabs/plonky3-private?branch=min%2Fp3-vuln-fix)",
- "p3-symmetric 0.2.2-succinct (git+https://github.com/succinctlabs/plonky3-private?branch=min%2Fp3-vuln-fix)",
+ "p3-field",
+ "p3-symmetric",
  "serde",
  "sp1-core-machine",
  "sp1-primitives 5.0.0",
@@ -4407,7 +4407,7 @@ dependencies = [
  "itertools 0.13.0",
  "num_cpus",
  "p3-air",
- "p3-baby-bear 0.2.2-succinct (git+https://github.com/succinctlabs/plonky3-private?branch=min%2Fp3-vuln-fix)",
+ "p3-baby-bear",
  "p3-bn254-fr",
  "p3-challenger",
  "p3-commit",

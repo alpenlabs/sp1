@@ -1,5 +1,5 @@
 use p3_baby_bear::BabyBear;
-use p3_bn254_fr::{Bn254Fr, DiffusionMatrixBN254};
+use p3_bls12_fr::{Bls12Fr, DiffusionMatrixBLS12};
 use p3_challenger::MultiField32Challenger;
 use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
@@ -25,18 +25,18 @@ pub const OUTER_MULTI_FIELD_CHALLENGER_DIGEST_SIZE: usize = 1;
 /// A configuration for outer recursion.
 pub type OuterVal = BabyBear;
 pub type OuterChallenge = BinomialExtensionField<OuterVal, 4>;
-pub type OuterPerm = Poseidon2<Bn254Fr, Poseidon2ExternalMatrixGeneral, DiffusionMatrixBN254, 3, 5>;
+pub type OuterPerm = Poseidon2<Bls12Fr, Poseidon2ExternalMatrixGeneral, DiffusionMatrixBLS12, 3, 5>;
 pub type OuterHash =
-    MultiField32PaddingFreeSponge<OuterVal, Bn254Fr, OuterPerm, 3, 16, DIGEST_SIZE>;
-pub type OuterDigestHash = Hash<OuterVal, Bn254Fr, DIGEST_SIZE>;
-pub type OuterDigest = [Bn254Fr; DIGEST_SIZE];
+    MultiField32PaddingFreeSponge<OuterVal, Bls12Fr, OuterPerm, 3, 16, DIGEST_SIZE>;
+pub type OuterDigestHash = Hash<OuterVal, Bls12Fr, DIGEST_SIZE>;
+pub type OuterDigest = [Bls12Fr; DIGEST_SIZE];
 pub type OuterCompress = TruncatedPermutation<OuterPerm, 2, 1, 3>;
-pub type OuterValMmcs = FieldMerkleTreeMmcs<BabyBear, Bn254Fr, OuterHash, OuterCompress, 1>;
+pub type OuterValMmcs = FieldMerkleTreeMmcs<BabyBear, Bls12Fr, OuterHash, OuterCompress, 1>;
 pub type OuterChallengeMmcs = ExtensionMmcs<OuterVal, OuterChallenge, OuterValMmcs>;
 pub type OuterDft = Radix2DitParallel;
 pub type OuterChallenger = MultiField32Challenger<
     OuterVal,
-    Bn254Fr,
+    Bls12Fr,
     OuterPerm,
     OUTER_MULTI_FIELD_CHALLENGER_WIDTH,
     OUTER_MULTI_FIELD_CHALLENGER_RATE,
@@ -66,7 +66,7 @@ pub fn outer_perm() -> OuterPerm {
         Poseidon2ExternalMatrixGeneral,
         ROUNDS_P,
         internal_round_constants,
-        DiffusionMatrixBN254,
+        DiffusionMatrixBLS12,
     )
 }
 
@@ -179,7 +179,7 @@ impl StarkGenericConfig for BabyBearPoseidon2Outer {
 
 impl ZeroCommitment<BabyBearPoseidon2Outer> for OuterPcs {
     fn zero_commitment(&self) -> Com<BabyBearPoseidon2Outer> {
-        OuterDigestHash::from([Bn254Fr::zero(); DIGEST_SIZE])
+        OuterDigestHash::from([Bls12Fr::zero(); DIGEST_SIZE])
     }
 }
 

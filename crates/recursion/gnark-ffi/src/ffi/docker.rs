@@ -46,7 +46,7 @@ fn call_docker(args: &[&str], mounts: &[(&str, &str)]) -> Result<()> {
     for (src, dest) in mounts {
         cmd.arg("-v").arg(format!("{}:{}", src, dest));
     }
-    cmd.arg(get_docker_image());
+    cmd.arg(get_docker_image()); // replace with modified image sp1-gnark:latest
     cmd.args(args);
     cmd.stdout(std::process::Stdio::piped());
     cmd.stderr(std::process::Stdio::piped());

@@ -87,14 +87,14 @@ func BuildPlonk(dataDir string) {
 	circuit := NewCircuit(witnessInput)
 
 	// Compile the circuit.
-	scs, err := frontend.Compile(ecc.BN254.ScalarField(), scs.NewBuilder, &circuit)
+	scs, err := frontend.Compile(ecc.BLS12_381.ScalarField(), scs.NewBuilder, &circuit)
 	if err != nil {
 		panic(err)
 	}
 
 	// Download the trusted setup.
-	var srs kzg.SRS = kzg.NewSRS(ecc.BN254)
-	var srsLagrange kzg.SRS = kzg.NewSRS(ecc.BN254)
+	var srs kzg.SRS = kzg.NewSRS(ecc.BLS12_381)
+	var srsLagrange kzg.SRS = kzg.NewSRS(ecc.BLS12_381)
 	srsFileName := dataDir + "/" + srsFile
 	srsLagrangeFileName := dataDir + "/" + srsLagrangeFile
 
@@ -175,7 +175,7 @@ func BuildPlonk(dataDir string) {
 
 	// Generate proof.
 	assignment := NewCircuit(witnessInput)
-	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+	witness, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
 	if err != nil {
 		panic(err)
 	}
@@ -268,7 +268,7 @@ func BuildGroth16(dataDir string) {
 	circuit := NewCircuit(witnessInput)
 
 	// Compile the circuit.
-	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), r1cs.NewBuilder, &circuit)
+	r1cs, err := frontend.Compile(ecc.BLS12_381.ScalarField(), r1cs.NewBuilder, &circuit)
 	if err != nil {
 		panic(err)
 	}
@@ -281,7 +281,7 @@ func BuildGroth16(dataDir string) {
 
 	// Generate proof.
 	assignment := NewCircuit(witnessInput)
-	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+	witness, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
 	if err != nil {
 		panic(err)
 	}

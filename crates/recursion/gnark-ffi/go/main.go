@@ -198,7 +198,7 @@ func TestMain() error {
 	// Compile the circuit.
 	circuit := sp1.NewCircuit(inputs)
 	builder := scs.NewBuilder
-	scs, err := frontend.Compile(ecc.BN254.ScalarField(), builder, &circuit)
+	scs, err := frontend.Compile(ecc.BLS12_381.ScalarField(), builder, &circuit)
 	if err != nil {
 		return err
 	}
@@ -217,7 +217,7 @@ func TestMain() error {
 
 	// Generate witness.
 	assignment := sp1.NewCircuit(inputs)
-	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+	witness, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
 	if err != nil {
 		return err
 	}
@@ -275,7 +275,7 @@ func TestPoseidonBabyBear2() *C.char {
 	assignment := sp1.TestPoseidon2BabyBearCircuit{Input: input, ExpectedOutput: expectedOutput}
 
 	builder := r1cs.NewBuilder
-	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), builder, &circuit)
+	r1cs, err := frontend.Compile(ecc.BLS12_381.ScalarField(), builder, &circuit)
 	if err != nil {
 		return C.CString(err.Error())
 	}
@@ -287,7 +287,7 @@ func TestPoseidonBabyBear2() *C.char {
 	}
 
 	// Generate witness.
-	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+	witness, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
 	if err != nil {
 		return C.CString(err.Error())
 	}

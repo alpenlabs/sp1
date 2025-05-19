@@ -48,5 +48,5 @@ func TestPoseidon2(t *testing.T) {
 
 	circuit = TestPoseidon2Circuit{Input: input, ExpectedOutput: expected_output}
 	witness = TestPoseidon2Circuit{Input: input, ExpectedOutput: expected_output}
-	assert.ProverSucceeded(&circuit, &witness, test.WithCurves(ecc.BN254), test.WithBackends(backend.PLONK))
+	assert.ProverSucceeded(&circuit, &witness, test.WithCurves(ecc.BLS12_381), test.WithBackends(backend.PLONK))
 }
