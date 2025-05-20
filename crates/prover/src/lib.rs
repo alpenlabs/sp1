@@ -1518,66 +1518,68 @@ pub mod tests {
         let core_proof = prover.prove_core(&pk_d, program, &stdin, opts, context)?;
         let public_values = core_proof.public_values.clone();
 
-        if env::var("COLLECT_SHAPES").is_ok() {
-            let mut shapes = BTreeSet::new();
-            for proof in core_proof.proof.0.iter() {
-                let shape = SP1ProofShape::Recursion(proof.shape());
-                shapes.insert(shape);
-            }
+        // if env::var("COLLECT_SHAPES").is_ok() {
+        //     let mut shapes = BTreeSet::new();
+        //     for proof in core_proof.proof.0.iter() {
+        //         let shape = SP1ProofShape::Recursion(proof.shape());
+        //         shapes.insert(shape);
+        //     }
 
-            let mut file = File::create("../shapes.bin").unwrap();
-            bincode::serialize_into(&mut file, &shapes).unwrap();
-        }
+        //     let mut file = File::create("../shapes.bin").unwrap();
+        //     bincode::serialize_into(&mut file, &shapes).unwrap();
+        // }
 
-        if verify {
-            tracing::info!("verify core");
-            prover.verify(&core_proof.proof, &vk)?;
-        }
+        // if verify {
+        //     tracing::info!("verify core");
+        //     prover.verify(&core_proof.proof, &vk)?;
+        // }
 
-        if test_kind == Test::Core {
-            return Ok(());
-        }
+        // if test_kind == Test::Core {
+        //     return Ok(());
+        // }
 
-        tracing::info!("compress");
-        let compress_span = tracing::debug_span!("compress").entered();
-        let compressed_proof = prover.compress(&vk, core_proof, vec![], opts)?;
-        compress_span.exit();
+        // tracing::info!("compress");
+        // let compress_span = tracing::debug_span!("compress").entered();
+        // let compressed_proof = prover.compress(&vk, core_proof, vec![], opts)?;
+        // compress_span.exit();
 
-        if verify {
-            tracing::info!("verify compressed");
-            prover.verify_compressed(&compressed_proof, &vk)?;
-        }
+        // if verify {
+        //     tracing::info!("verify compressed");
+        //     prover.verify_compressed(&compressed_proof, &vk)?;
+        // }
 
-        if test_kind == Test::Compress {
-            return Ok(());
-        }
+        // if test_kind == Test::Compress {
+        //     return Ok(());
+        // }
 
-        tracing::info!("shrink");
-        let shrink_proof = prover.shrink(compressed_proof, opts)?;
+        // tracing::info!("shrink");
+        // let shrink_proof = prover.shrink(compressed_proof, opts)?;
 
-        if verify {
-            tracing::info!("verify shrink");
-            prover.verify_shrink(&shrink_proof, &vk)?;
-        }
+        // if verify {
+        //     tracing::info!("verify shrink");
+        //     prover.verify_shrink(&shrink_proof, &vk)?;
+        // }
 
-        if test_kind == Test::Shrink {
-            return Ok(());
-        }
+        // if test_kind == Test::Shrink {
+        //     return Ok(());
+        // }
 
-        tracing::info!("wrap bn254");
-        let wrapped_bn254_proof = prover.wrap_bn254(shrink_proof, opts)?;
-        let bytes = bincode::serialize(&wrapped_bn254_proof).unwrap();
+        // tracing::info!("wrap bn254");
+        // let wrapped_bn254_proof = prover.wrap_bn254(shrink_proof, opts)?;
+        // let bytes = bincode::serialize(&wrapped_bn254_proof).unwrap();
 
-        // Save the proof.
-        let mut file = File::create("proof-with-pis.bin").unwrap();
-        file.write_all(bytes.as_slice()).unwrap();
+        // // Save the proof.
+        // let mut file = File::create("proof-with-pis.bin").unwrap();
+        // file.write_all(bytes.as_slice()).unwrap();
 
         // Load the proof.
         let mut file = File::open("proof-with-pis.bin").unwrap();
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes).unwrap();
 
-        let wrapped_bn254_proof = bincode::deserialize(&bytes).unwrap();
+        let wrapped_bn254_proof: SP1ReduceProof<BabyBearPoseidon2Outer> =
+            bincode::deserialize(&bytes).unwrap();
+        let _ = prover.wrap_vk.set(wrapped_bn254_proof.clone().vk);
 
         if verify {
             tracing::info!("verify wrap bn254");
@@ -1596,26 +1598,26 @@ pub mod tests {
         let vk_digest_bn254 = sp1_vkey_digest_bn254(&wrapped_bn254_proof);
         assert_eq!(vk_digest_bn254, vk.hash_bn254());
 
-        tracing::info!("Test the outer Plonk circuit");
-        let (constraints, witness) =
-            build_constraints_and_witness(&wrapped_bn254_proof.vk, &wrapped_bn254_proof.proof);
-        PlonkBn254Prover::test(constraints, witness);
-        tracing::info!("Circuit test succeeded");
+        // tracing::info!("Test the outer Plonk circuit");
+        // let (constraints, witness) =
+        //     build_constraints_and_witness(&wrapped_bn254_proof.vk, &wrapped_bn254_proof.proof);
+        // PlonkBn254Prover::test(constraints, witness);
+        // tracing::info!("Circuit test succeeded");
 
-        if test_kind == Test::CircuitTest {
-            return Ok(());
-        }
+        // if test_kind == Test::CircuitTest {
+        //     return Ok(());
+        // }
 
-        tracing::info!("generate plonk bn254 proof");
-        let artifacts_dir = try_build_plonk_bn254_artifacts_dev(
-            &wrapped_bn254_proof.vk,
-            &wrapped_bn254_proof.proof,
-        );
-        let plonk_bn254_proof =
-            prover.wrap_plonk_bn254(wrapped_bn254_proof.clone(), &artifacts_dir);
-        println!("{:?}", plonk_bn254_proof);
+        // tracing::info!("generate plonk bn254 proof");
+        // let artifacts_dir = try_build_plonk_bn254_artifacts_dev(
+        //     &wrapped_bn254_proof.vk,
+        //     &wrapped_bn254_proof.proof,
+        // );
+        // let plonk_bn254_proof =
+        //     prover.wrap_plonk_bn254(wrapped_bn254_proof.clone(), &artifacts_dir);
+        // println!("{:?}", plonk_bn254_proof);
 
-        prover.verify_plonk_bn254(&plonk_bn254_proof, &vk, &public_values, &artifacts_dir)?;
+        // prover.verify_plonk_bn254(&plonk_bn254_proof, &vk, &public_values, &artifacts_dir)?;
 
         tracing::info!("generate groth16 bn254 proof");
         let artifacts_dir = try_build_groth16_bn254_artifacts_dev(

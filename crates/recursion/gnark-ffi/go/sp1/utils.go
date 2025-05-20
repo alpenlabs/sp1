@@ -4,13 +4,31 @@ import (
 	"bytes"
 	"encoding/hex"
 
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	groth16 "github.com/consensys/gnark/backend/groth16"
-	groth16_bn254 "github.com/consensys/gnark/backend/groth16/bn254"
+	groth16_bn254 "github.com/consensys/gnark/backend/groth16/bls12-381"
 	plonk "github.com/consensys/gnark/backend/plonk"
 	plonk_bn254 "github.com/consensys/gnark/backend/plonk/bn254"
 	"github.com/consensys/gnark/frontend"
 	"github.com/succinctlabs/sp1-recursion-gnark/sp1/babybear"
 )
+
+// MarshalSolidity converts a proof to a byte array that can be used in a
+// Solidity contract.
+func MarshalSolidityGroth(proof *groth16_bn254.Proof) []byte {
+	var buf bytes.Buffer
+	_, err := proof.WriteRawTo(&buf)
+	if err != nil {
+		panic(err)
+	}
+
+	// If there are no commitments, we can return only Ar | Bs | Krs
+	if len(proof.Commitments) > 0 {
+		return buf.Bytes()
+	} else {
+		return buf.Bytes()[:8*fr.Bytes]
+	}
+}
 
 func NewSP1PlonkBn254Proof(proof *plonk.Proof, witnessInput WitnessInput) Proof {
 	var buf bytes.Buffer
@@ -45,7 +63,7 @@ func NewSP1Groth16Proof(proof *groth16.Proof, witnessInput WitnessInput) Proof {
 	// Cast groth16 proof into groth16_bn254 proof so we can call MarshalSolidity.
 	p := (*proof).(*groth16_bn254.Proof)
 
-	encodedProof := p.MarshalSolidity()
+	encodedProof := MarshalSolidityGroth(p)
 
 	return Proof{
 		PublicInputs: publicInputs,
@@ -68,10 +86,10 @@ func NewCircuit(witnessInput WitnessInput) Circuit {
 		exts[i] = babybear.NewE(witnessInput.Exts[i])
 	}
 	return Circuit{
-		VkeyHash:             witnessInput.VkeyHash,
+		VkeyHash:              witnessInput.VkeyHash,
 		CommittedValuesDigest: witnessInput.CommittedValuesDigest,
-		Vars:                 vars,
-		Felts:                felts,
-		Exts:                 exts,
+		Vars:                  vars,
+		Felts:                 felts,
+		Exts:                  exts,
 	}
 }
