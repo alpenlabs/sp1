@@ -446,7 +446,7 @@ pub(crate) mod tests {
         ir::{Builder, Config, Ext, ExtConst, Felt, Var},
     };
     use sp1_recursion_core::stark::{outer_perm, BabyBearPoseidon2Outer, OuterCompress, OuterHash};
-    use sp1_recursion_gnark_ffi::PlonkBn254Prover;
+    use sp1_recursion_gnark_ffi::{Groth16Bn254Prover, PlonkBn254Prover};
     use sp1_stark::{baby_bear_poseidon2::BabyBearPoseidon2, StarkGenericConfig};
 
     use crate::{
@@ -615,7 +615,7 @@ pub(crate) mod tests {
 
         let mut backend = ConstraintCompiler::<C>::default();
         let constraints = backend.emit(builder.into_operations());
-        PlonkBn254Prover::test::<C>(constraints.clone(), OuterWitness::default());
+        Groth16Bn254Prover::test::<C>(constraints.clone(), OuterWitness::default());
     }
 
     #[test]

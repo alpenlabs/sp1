@@ -1573,7 +1573,7 @@ pub mod tests {
         // file.write_all(bytes.as_slice()).unwrap();
 
         // Load the proof.
-        let mut file = File::open("proof-with-pis.bin").unwrap();
+        let mut file = File::open("proof-with-pis_bls.bin").unwrap();
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes).unwrap();
 

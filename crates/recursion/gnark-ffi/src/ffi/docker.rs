@@ -40,16 +40,19 @@ fn get_docker_image() -> String {
 /// Note: files created here by `call_docker` are read-only for after the process exits.
 /// To fix this, manually set the docker user to the current user by supplying a `-u` flag.
 fn call_docker(args: &[&str], mounts: &[(&str, &str)]) -> Result<()> {
+    println!("Calling docer {:?}", args);
     tracing::info!("Running {} in docker", args[0]);
     let mut cmd = Command::new("docker");
-    cmd.args(["run", "--rm"]);
+    cmd.args(["run"]);
     for (src, dest) in mounts {
         cmd.arg("-v").arg(format!("{}:{}", src, dest));
     }
+    cmd.arg("-v").arg(format!("{}:{}", "/Users/manishbista/.sp1/circuits/r1cs_temp", "/r1cs_temp"));
+    cmd.arg("-v")
+        .arg(format!("{}:{}", "/Users/manishbista/.sp1/circuits/witness_temp", "/witness_temp"));
     cmd.arg("sp1-gnark:latest"); // replace with modified image sp1-gnark:latest
     cmd.args(args);
-    cmd.stdout(std::process::Stdio::piped());
-    cmd.stderr(std::process::Stdio::piped());
+    println!("Command {:?}", cmd);
     let result = cmd.output()?;
     if !result.status.success() {
         let stderr = String::from_utf8_lossy(&result.stderr);
@@ -58,7 +61,11 @@ fn call_docker(args: &[&str], mounts: &[(&str, &str)]) -> Result<()> {
         tracing::error!("status: {:?}", result.status);
         tracing::error!("stderr: {:?}", stderr);
 
-        return Err(anyhow!("Docker command failed \n stdout: {:?}\n stderr: {:?}", stdout, stderr));
+        return Err(anyhow!(
+            "Docker command failed \n stdout: {:?}\n stderr: {:?}",
+            stdout,
+            stderr
+        ));
     }
     Ok(())
 }

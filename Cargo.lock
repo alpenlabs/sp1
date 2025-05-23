@@ -5720,6 +5720,8 @@ dependencies = [
  "itertools 0.13.0",
  "lru",
  "num-bigint 0.4.6",
+ "num-traits",
+ "once_cell",
  "p3-baby-bear",
  "p3-bls12-fr",
  "p3-challenger",

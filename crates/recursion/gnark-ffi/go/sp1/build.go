@@ -1,8 +1,10 @@
 package sp1
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"strings"
@@ -11,6 +13,8 @@ import (
 	"github.com/consensys/gnark-crypto/kzg"
 	groth16 "github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/backend/plonk"
+	"github.com/consensys/gnark/constraint"
+	bcs "github.com/consensys/gnark/constraint/bls12-381"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/frontend/cs/scs"
@@ -242,6 +246,65 @@ func BuildPlonk(dataDir string) {
 	}
 }
 
+// Dump writes the coefficient table and the fully‑expanded R1Cs rows into w.
+// Caller decides where w points to (file, buffer, network, …).
+func Dump(cs constraint.ConstraintSystem, w io.Writer) error {
+	// 1. coefficient table
+	coeffs := cs.(*bcs.R1CS).Coefficients
+	if err := binary.Write(w, binary.LittleEndian, uint32(len(coeffs))); err != nil {
+		return err
+	}
+	for _, c := range coeffs {
+		data := c.Marshal() // returns 32‑byte slice, no error
+		if _, err := w.Write(data); err != nil {
+			return err
+		}
+	}
+
+	// 2. full rows
+	rows := cs.(*bcs.R1CS).GetR1Cs() // materialises all constraints
+	if err := binary.Write(w, binary.LittleEndian, uint32(len(rows))); err != nil {
+		return err
+	}
+
+	// helper closure
+	writeLE := func(n uint32) error { return binary.Write(w, binary.LittleEndian, n) }
+
+	for _, r := range rows {
+		if err := writeLE(uint32(len(r.L))); err != nil {
+			return err
+		}
+		if err := writeLE(uint32(len(r.R))); err != nil {
+			return err
+		}
+		if err := writeLE(uint32(len(r.O))); err != nil {
+			return err
+		}
+
+		dumpLE := func(expr constraint.LinearExpression) error {
+			for _, t := range expr {
+				if err := writeLE(uint32(t.WireID())); err != nil {
+					return err
+				}
+				if err := writeLE(uint32(t.CoeffID())); err != nil {
+					return err
+				}
+			}
+			return nil
+		}
+		if err := dumpLE(r.L); err != nil {
+			return err
+		}
+		if err := dumpLE(r.R); err != nil {
+			return err
+		}
+		if err := dumpLE(r.O); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func BuildGroth16(dataDir string) {
 	// Set the environment variable for the constraints file.
 	//
@@ -271,6 +334,65 @@ func BuildGroth16(dataDir string) {
 	r1cs, err := frontend.Compile(ecc.BLS12_381.ScalarField(), r1cs.NewBuilder, &circuit)
 	if err != nil {
 		panic(err)
+	}
+
+	{
+		// benchmark
+		nbCoeff := r1cs.GetNbCoefficients()
+		bytesCoeffTable := nbCoeff * 32
+		fmt.Printf("Coeff-table: %d elements  ≈  %d bytes\n",
+			nbCoeff, bytesCoeffTable)
+
+		var nTerms int
+
+		r1cs_contr := r1cs.(*bcs.R1CS)
+		for _, r := range r1cs_contr.GetR1Cs() { // materialises each row once
+			nTerms += len(r.L) + len(r.R) + len(r.O) // three linear-expressions
+		}
+
+		fmt.Printf("Total terms in matrix: %d  (≈ %d bytes)\n",
+			nTerms, nTerms*8) // a Term is 2×uint32 = 8 B
+
+		num_vars := (r1cs.GetNbSecretVariables() + r1cs.GetNbPublicVariables() + r1cs.GetNbInternalVariables())
+		naive := 3 * r1cs.GetNbConstraints() * num_vars * 32
+
+		fmt.Printf("Naive cost num_vars=(%d) num_constraints=(%d)  (≈ %d bytes)\n", num_vars, r1cs.GetNbConstraints(), naive) // a Term is 2×uint32 = 8 B
+	}
+
+	{
+		r1cs_fn := "/r1cs_temp"
+		file, err := os.Create(r1cs_fn) // os.Create returns an *os.File, which implements io.Writer
+		if err != nil {
+			log.Fatalf("Failed to create file: %v", err)
+		}
+		defer file.Close() // Ensure the file is closed when main exits
+
+		Dump(r1cs, file)
+
+		assignment := NewCircuit(witnessInput)
+		witness, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
+		if err != nil {
+			panic(err)
+		}
+		_solution, err := r1cs.Solve(witness)
+		if err != nil {
+			panic("err is not nil for solve")
+		}
+		solution := _solution.(*bcs.R1CSSolution)
+
+		witness_fn := "/witness_temp"
+		wfile, err := os.Create(witness_fn) // os.Create returns an *os.File, which implements io.Writer
+		if err != nil {
+			log.Fatalf("Failed to create file: %v", err)
+		}
+		defer wfile.Close() // Ensure the file is closed when main exits
+
+		bytesWritten, err := solution.W.WriteTo(wfile)
+		if err != nil {
+			log.Fatalf("Failed to write to file: %v", err)
+		}
+
+		fmt.Printf("Successfully wrote %d bytes to %s\n", bytesWritten, witness_fn)
 	}
 
 	// Generate the proving and verifying key.
