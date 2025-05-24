@@ -130,10 +130,12 @@ pub fn words_to_bytes<T: Copy>(words: &[Word<T>]) -> Vec<T> {
 pub fn babybears_to_bn254(digest: &[BabyBear; 8]) -> Bls12Fr {
     let mut result = Bls12Fr::zero();
     for word in digest.iter() {
-        // Since BabyBear prime is less than 2^31, we can shift by 31 bits each time and still be
-        // within the Bls12Fr field, so we don't have to truncate the top 3 bits.
-        result *= Bls12Fr::from_canonical_u64(1 << 31);
-        result += Bls12Fr::from_canonical_u32(word.as_canonical_u32());
+        // Since BabyBear prime is less than 2^31, we can shift by 28 bits each time and still be
+        // within the Bls12Fr field, we truncate the top 3 bits everytime.
+        // so total size of result in the end is 8 x 28 = 224 bits
+        result *= Bls12Fr::from_canonical_u64(1 << 28); // shift by 28
+        let masked_val_u32 = word.as_canonical_u32() & 0x0FFFFFFF; // mask top 3-bits
+        result += Bls12Fr::from_canonical_u32(masked_val_u32); // add 28 bits
     }
     result
 }
@@ -142,15 +144,11 @@ pub fn babybears_to_bn254(digest: &[BabyBear; 8]) -> Bls12Fr {
 /// (which would become the 3 most significant bits) are truncated.
 pub fn babybear_bytes_to_bn254(bytes: &[BabyBear; 32]) -> Bls12Fr {
     let mut result = Bls12Fr::zero();
-    for (i, byte) in bytes.iter().enumerate() {
-        debug_assert!(byte < &BabyBear::from_canonical_u32(256));
-        if i == 0 {
-            // 32 bytes is more than Bn254 prime, so we need to truncate the top 3 bits.
-            result = Bls12Fr::from_canonical_u32(byte.as_canonical_u32() & 0x1f);
-        } else {
-            result *= Bls12Fr::from_canonical_u32(256);
-            result += Bls12Fr::from_canonical_u32(byte.as_canonical_u32());
-        }
+    for byte in bytes.iter() {
+        result *= Bls12Fr::from_canonical_u32(128); // shift by 7 bits
+        let masked = byte.as_canonical_u32() & 0x7f;
+        debug_assert!(masked < 128);
+        result += Bls12Fr::from_canonical_u32(masked); // add 7-bit
     }
     result
 }
