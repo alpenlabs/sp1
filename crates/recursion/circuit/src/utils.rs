@@ -3,38 +3,35 @@ use p3_bls12_fr::Bls12Fr;
 use p3_field::{AbstractField, PrimeField32};
 
 use sp1_recursion_compiler::ir::{Builder, Config, Felt, Var};
-use sp1_recursion_core::DIGEST_SIZE;
+use sp1_recursion_core::{DIGEST_SIZE, NUM_BITS};
 
 use sp1_stark::Word;
 
-/// Convert 8 BabyBear words into a Bls12Fr field element by shifting by 31 bits each time. The last
+/// Convert 8 BabyBear words into a Bls12Fr field element by shifting by 28 bits each time. The last
 /// word becomes the least significant bits.
 #[allow(dead_code)]
 pub fn babybears_to_bn254(digest: &[BabyBear; 8]) -> Bls12Fr {
     let mut result = Bls12Fr::zero();
     for word in digest.iter() {
-        // Since BabyBear prime is less than 2^31, we can shift by 31 bits each time and still be
-        // within the Bls12Fr field, so we don't have to truncate the top 3 bits.
-        result *= Bls12Fr::from_canonical_u64(1 << 31);
-        result += Bls12Fr::from_canonical_u32(word.as_canonical_u32());
+        // Since BabyBear prime is less than 2^31, we can shift by 28 bits each time and still be
+        // within the Bls12Fr field, we truncate the top 3 bits everytime.
+        // so total size of result in the end is 8 x 28 = 224 bits
+        result *= Bls12Fr::from_canonical_u64(1 << 28); // shift by 28
+        let masked_val_u32 = word.as_canonical_u32() & 0x0FFFFFFF; // mask top 3-bits
+        result += Bls12Fr::from_canonical_u32(masked_val_u32); // add 28 bits
     }
     result
 }
 
-/// Convert 32 BabyBear bytes into a Bls12Fr field element. The first byte's most significant 3 bits
-/// (which would become the 3 most significant bits) are truncated.
+/// Convert 32 BabyBear bytes into a Bls12Fr field element. All byte's most significant 1 bit is masked (truncated)
 #[allow(dead_code)]
 pub fn babybear_bytes_to_bn254(bytes: &[BabyBear; 32]) -> Bls12Fr {
     let mut result = Bls12Fr::zero();
-    for (i, byte) in bytes.iter().enumerate() {
-        debug_assert!(byte < &BabyBear::from_canonical_u32(256));
-        if i == 0 {
-            // 32 bytes is more than Bn254 prime, so we need to truncate the top 3 bits.
-            result = Bls12Fr::from_canonical_u32(byte.as_canonical_u32() & 0x1f);
-        } else {
-            result *= Bls12Fr::from_canonical_u32(256);
-            result += Bls12Fr::from_canonical_u32(byte.as_canonical_u32());
-        }
+    for byte in bytes.iter() {
+        result *= Bls12Fr::from_canonical_u32(128); // shift by 7 bits
+        let masked = byte.as_canonical_u32() & 0x7f;
+        debug_assert!(masked < 128);
+        result += Bls12Fr::from_canonical_u32(masked); // add 7-bit
     }
     result
 }
@@ -44,14 +41,21 @@ pub fn felts_to_bn254_var<C: Config>(
     builder: &mut Builder<C>,
     digest: &[Felt<C::F>; DIGEST_SIZE],
 ) -> Var<C::N> {
-    let var_2_31: Var<_> = builder.constant(C::N::from_canonical_u32(1 << 31));
+    let var_2_28: Var<_> = builder.constant(C::N::from_canonical_u32(1 << 28));
     let result = builder.constant(C::N::zero());
+    let zero_var: Var<_> = builder.constant(C::N::zero());
+
     for (i, word) in digest.iter().enumerate() {
-        let word_var = builder.felt2var_circuit(*word);
+        let all_bits: Vec<Var<C::N>> = builder.num2bits_f_circuit(*word);
+        for j in 0..3 {
+            // mask 30, 29, 28'th positions leaving 0-27 untouched; thus masking all but 28 bits
+            builder.assign(all_bits[NUM_BITS - j - 1], zero_var);
+        }
+        let word_var = builder.bits2num_v_circuit(&all_bits);
         if i == 0 {
             builder.assign(result, word_var);
         } else {
-            builder.assign(result, result * var_2_31 + word_var);
+            builder.assign(result, result * var_2_28 + word_var);
         }
     }
     result
@@ -62,22 +66,20 @@ pub fn felt_bytes_to_bn254_var<C: Config>(
     builder: &mut Builder<C>,
     bytes: &[Felt<C::F>; 32],
 ) -> Var<C::N> {
-    let var_256: Var<_> = builder.constant(C::N::from_canonical_u32(256));
+    let var_128: Var<_> = builder.constant(C::N::from_canonical_u32(128));
     let zero_var: Var<_> = builder.constant(C::N::zero());
     let result = builder.constant(C::N::zero());
     for (i, byte) in bytes.iter().enumerate() {
         let byte_bits = builder.num2bits_f_circuit(*byte);
+        // mask top 1-bit
+        for j in 0..1 {
+            builder.assign(byte_bits[8 - j - 1], zero_var);
+        }
+        let byte_var = builder.bits2num_v_circuit(&byte_bits);
         if i == 0 {
-            // Since 32 bytes doesn't fit into Bn254, we need to truncate the top 3 bits.
-            // For first byte, zero out 3 most significant bits.
-            for i in 0..3 {
-                builder.assign(byte_bits[8 - i - 1], zero_var);
-            }
-            let byte_var = builder.bits2num_v_circuit(&byte_bits);
             builder.assign(result, byte_var);
         } else {
-            let byte_var = builder.bits2num_v_circuit(&byte_bits);
-            builder.assign(result, result * var_256 + byte_var);
+            builder.assign(result, result * var_128 + byte_var);
         }
     }
     result
