@@ -1,6 +1,7 @@
 package sp1
 
 import (
+	"bufio"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
@@ -10,11 +11,11 @@ import (
 	"strings"
 
 	"github.com/consensys/gnark-crypto/ecc"
+	fr "github.com/consensys/gnark-crypto/ecc/sect/fr"
 	"github.com/consensys/gnark-crypto/kzg"
-	groth16 "github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/constraint"
-	bcs "github.com/consensys/gnark/constraint/bls12-381"
+	bcs "github.com/consensys/gnark/constraint/sect"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
 	"github.com/consensys/gnark/frontend/cs/scs"
@@ -91,7 +92,7 @@ func BuildPlonk(dataDir string) {
 	circuit := NewCircuit(witnessInput)
 
 	// Compile the circuit.
-	scs, err := frontend.Compile(ecc.BLS12_381.ScalarField(), scs.NewBuilder, &circuit)
+	scs, err := frontend.Compile(fr.Modulus(), scs.NewBuilder, &circuit)
 	if err != nil {
 		panic(err)
 	}
@@ -179,7 +180,7 @@ func BuildPlonk(dataDir string) {
 
 	// Generate proof.
 	assignment := NewCircuit(witnessInput)
-	witness, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
+	witness, err := frontend.NewWitness(&assignment, fr.Modulus())
 	if err != nil {
 		panic(err)
 	}
@@ -248,50 +249,70 @@ func BuildPlonk(dataDir string) {
 
 // Dump writes the coefficient table and the fully‑expanded R1Cs rows into w.
 // Caller decides where w points to (file, buffer, network, …).
+// Dump writes the coefficient table and the fully-expanded R1Cs rows into w.
+// It is functionally identical to the original version but batches I/O
+// through an internal bufio.Writer and uses raw little-endian encodes for
+// scalars to avoid reflection overhead in binary.Write.
 func Dump(cs constraint.ConstraintSystem, w io.Writer) error {
-	// 1. coefficient table
-	coeffs := cs.(*bcs.R1CS).Coefficients
-	if err := binary.Write(w, binary.LittleEndian, uint32(len(coeffs))); err != nil {
+	// Wrap the destination with a large buffered writer (1 MiB; tune as needed).
+	bw := bufio.NewWriterSize(w, 1<<20)
+	defer bw.Flush() // ensure everything is pushed downstream
+
+	r1cs, ok := cs.(*bcs.R1CS)
+	if !ok {
+		return fmt.Errorf("unsupported constraint system type %T", cs)
+	}
+
+	coeffs := r1cs.Coefficients
+	rows := r1cs.GetR1Cs()
+
+	// A 4-byte scratch reused for every uint32 we encode.
+	var scratch [4]byte
+
+	putU32 := func(v uint32) error {
+		binary.LittleEndian.PutUint32(scratch[:], v)
+		_, err := bw.Write(scratch[:])
+		return err
+	}
+
+	// 1. Coefficient table ---------------------------------------------------
+	if err := putU32(uint32(len(coeffs))); err != nil {
 		return err
 	}
 	for _, c := range coeffs {
-		data := c.Marshal() // returns 32‑byte slice, no error
-		if _, err := w.Write(data); err != nil {
+		if _, err := bw.Write(c.Marshal()); err != nil { // 32 bytes each
 			return err
 		}
 	}
 
-	// 2. full rows
-	rows := cs.(*bcs.R1CS).GetR1Cs() // materialises all constraints
-	if err := binary.Write(w, binary.LittleEndian, uint32(len(rows))); err != nil {
+	// 2. Full R1CS rows ------------------------------------------------------
+	if err := putU32(uint32(len(rows))); err != nil {
 		return err
 	}
 
-	// helper closure
-	writeLE := func(n uint32) error { return binary.Write(w, binary.LittleEndian, n) }
+	dumpLE := func(expr constraint.LinearExpression) error {
+		for _, t := range expr {
+			if err := putU32(uint32(t.WireID())); err != nil {
+				return err
+			}
+			if err := putU32(uint32(t.CoeffID())); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
 
 	for _, r := range rows {
-		if err := writeLE(uint32(len(r.L))); err != nil {
+		if err := putU32(uint32(len(r.L))); err != nil {
 			return err
 		}
-		if err := writeLE(uint32(len(r.R))); err != nil {
+		if err := putU32(uint32(len(r.R))); err != nil {
 			return err
 		}
-		if err := writeLE(uint32(len(r.O))); err != nil {
+		if err := putU32(uint32(len(r.O))); err != nil {
 			return err
 		}
 
-		dumpLE := func(expr constraint.LinearExpression) error {
-			for _, t := range expr {
-				if err := writeLE(uint32(t.WireID())); err != nil {
-					return err
-				}
-				if err := writeLE(uint32(t.CoeffID())); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
 		if err := dumpLE(r.L); err != nil {
 			return err
 		}
@@ -302,7 +323,8 @@ func Dump(cs constraint.ConstraintSystem, w io.Writer) error {
 			return err
 		}
 	}
-	return nil
+
+	return bw.Flush() // explicit flush + propagate any error
 }
 
 func BuildGroth16(dataDir string) {
@@ -331,7 +353,7 @@ func BuildGroth16(dataDir string) {
 	circuit := NewCircuit(witnessInput)
 
 	// Compile the circuit.
-	r1cs, err := frontend.Compile(ecc.BLS12_381.ScalarField(), r1cs.NewBuilder, &circuit)
+	r1cs, err := frontend.Compile(fr.Modulus(), r1cs.NewBuilder, &circuit)
 	if err != nil {
 		panic(err)
 	}
@@ -359,113 +381,113 @@ func BuildGroth16(dataDir string) {
 		fmt.Printf("Naive cost num_vars=(%d) num_constraints=(%d)  (≈ %d bytes)\n", num_vars, r1cs.GetNbConstraints(), naive) // a Term is 2×uint32 = 8 B
 	}
 
-	// {
-	// 	r1cs_fn := "/r1cs_temp"
-	// 	file, err := os.Create(r1cs_fn) // os.Create returns an *os.File, which implements io.Writer
-	// 	if err != nil {
-	// 		log.Fatalf("Failed to create file: %v", err)
-	// 	}
-	// 	defer file.Close() // Ensure the file is closed when main exits
+	{
+		r1cs_fn := "/r1cs_temp"
+		file, err := os.Create(r1cs_fn) // os.Create returns an *os.File, which implements io.Writer
+		if err != nil {
+			log.Fatalf("Failed to create file: %v", err)
+		}
+		defer file.Close() // Ensure the file is closed when main exits
 
-	// 	Dump(r1cs, file)
+		Dump(r1cs, file)
 
-	// 	assignment := NewCircuit(witnessInput)
-	// 	witness, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	_solution, err := r1cs.Solve(witness)
-	// 	if err != nil {
-	// 		panic("err is not nil for solve")
-	// 	}
-	// 	solution := _solution.(*bcs.R1CSSolution)
+		assignment := NewCircuit(witnessInput)
+		witness, err := frontend.NewWitness(&assignment, fr.Modulus())
+		if err != nil {
+			panic(err)
+		}
+		_solution, err := r1cs.Solve(witness)
+		if err != nil {
+			panic("err is not nil for solve")
+		}
+		solution := _solution.(*bcs.R1CSSolution)
 
-	// 	witness_fn := "/witness_temp"
-	// 	wfile, err := os.Create(witness_fn) // os.Create returns an *os.File, which implements io.Writer
-	// 	if err != nil {
-	// 		log.Fatalf("Failed to create file: %v", err)
-	// 	}
-	// 	defer wfile.Close() // Ensure the file is closed when main exits
+		witness_fn := "/witness_temp"
+		wfile, err := os.Create(witness_fn) // os.Create returns an *os.File, which implements io.Writer
+		if err != nil {
+			log.Fatalf("Failed to create file: %v", err)
+		}
+		defer wfile.Close() // Ensure the file is closed when main exits
 
-	// 	bytesWritten, err := solution.W.WriteTo(wfile)
-	// 	if err != nil {
-	// 		log.Fatalf("Failed to write to file: %v", err)
-	// 	}
+		bytesWritten, err := solution.W.WriteTo(wfile)
+		if err != nil {
+			log.Fatalf("Failed to write to file: %v", err)
+		}
 
-	// 	fmt.Printf("Successfully wrote %d bytes to %s\n", bytesWritten, witness_fn)
+		fmt.Printf("Successfully wrote %d bytes to %s\n", bytesWritten, witness_fn)
+	}
+
+	// // Generate the proving and verifying key.
+	// pk, vk, err := groth16.Setup(r1cs)
+	// if err != nil {
+	// 	panic(err)
 	// }
 
-	// Generate the proving and verifying key.
-	pk, vk, err := groth16.Setup(r1cs)
-	if err != nil {
-		panic(err)
-	}
+	// // Generate proof.
+	// assignment := NewCircuit(witnessInput)
+	// witness, err := frontend.NewWitness(&assignment, fr.Modulus())
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// proof, err := groth16.Prove(r1cs, pk, witness)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	// Generate proof.
-	assignment := NewCircuit(witnessInput)
-	witness, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
-	if err != nil {
-		panic(err)
-	}
-	proof, err := groth16.Prove(r1cs, pk, witness)
-	if err != nil {
-		panic(err)
-	}
+	// // Verify proof.
+	// publicWitness, err := witness.Public()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// err = groth16.Verify(proof, vk, publicWitness)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	// Verify proof.
-	publicWitness, err := witness.Public()
-	if err != nil {
-		panic(err)
-	}
-	err = groth16.Verify(proof, vk, publicWitness)
-	if err != nil {
-		panic(err)
-	}
+	// // Create the build directory.
+	// os.MkdirAll(dataDir, 0755)
 
-	// Create the build directory.
-	os.MkdirAll(dataDir, 0755)
+	// // Write the solidity verifier.
+	// solidityVerifierFile, err := os.Create(dataDir + "/" + groth16VerifierContractPath)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// vk.ExportSolidity(solidityVerifierFile)
 
-	// Write the solidity verifier.
-	solidityVerifierFile, err := os.Create(dataDir + "/" + groth16VerifierContractPath)
-	if err != nil {
-		panic(err)
-	}
-	vk.ExportSolidity(solidityVerifierFile)
+	// // Modify the solidity verifier.
+	// modifyGroth16Verifier(solidityVerifierFile)
+	// defer solidityVerifierFile.Close()
 
-	// Modify the solidity verifier.
-	modifyGroth16Verifier(solidityVerifierFile)
-	defer solidityVerifierFile.Close()
+	// // Write the R1CS.
+	// r1csFile, err := os.Create(dataDir + "/" + groth16CircuitPath)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer r1csFile.Close()
+	// _, err = r1cs.WriteTo(r1csFile)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	// Write the R1CS.
-	r1csFile, err := os.Create(dataDir + "/" + groth16CircuitPath)
-	if err != nil {
-		panic(err)
-	}
-	defer r1csFile.Close()
-	_, err = r1cs.WriteTo(r1csFile)
-	if err != nil {
-		panic(err)
-	}
+	// // Write the verifier key.
+	// vkFile, err := os.Create(dataDir + "/" + groth16VkPath)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer vkFile.Close()
+	// _, err = vk.WriteTo(vkFile)
+	// if err != nil {
+	// 	panic(err)
+	// }
 
-	// Write the verifier key.
-	vkFile, err := os.Create(dataDir + "/" + groth16VkPath)
-	if err != nil {
-		panic(err)
-	}
-	defer vkFile.Close()
-	_, err = vk.WriteTo(vkFile)
-	if err != nil {
-		panic(err)
-	}
-
-	// Write the proving key.
-	pkFile, err := os.Create(dataDir + "/" + groth16PkPath)
-	if err != nil {
-		panic(err)
-	}
-	defer pkFile.Close()
-	err = pk.WriteDump(pkFile)
-	if err != nil {
-		panic(err)
-	}
+	// // Write the proving key.
+	// pkFile, err := os.Create(dataDir + "/" + groth16PkPath)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// defer pkFile.Close()
+	// err = pk.WriteDump(pkFile)
+	// if err != nil {
+	// 	panic(err)
+	// }
 }
