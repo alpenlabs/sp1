@@ -1,5 +1,5 @@
-github.com/alpenlabs/gnark v0.0.0-20250521043713-a9d952d1b784 h1:+xJAieBE8WsZ8DShlq9bTj8IaZeXroEqDJBgneeR0v4=
-github.com/alpenlabs/gnark v0.0.0-20250521043713-a9d952d1b784/go.mod h1:0u6evWYINfJpfW9PeqiDycThrEyf5y5KumLRxFTKhWM=
+github.com/alpenlabs/gnark v0.0.0-20250525053417-53957e5f3230 h1:l3YFoT29VJHj1Y24RoXdAIqEdrmDC15pRZtWSQFmjkU=
+github.com/alpenlabs/gnark v0.0.0-20250525053417-53957e5f3230/go.mod h1:0u6evWYINfJpfW9PeqiDycThrEyf5y5KumLRxFTKhWM=
 github.com/alpenlabs/gnark-crypto v0.0.0-20250521035818-134953372b00 h1:bOdSFf8NHlW2ZmuG56fFJQRH40ZAud/OdLfZgJJ2j+A=
 github.com/alpenlabs/gnark-crypto v0.0.0-20250521035818-134953372b00/go.mod h1:CU4UijNPsHawiVGNxe9co07FkzCeWHHrb1li/n1XoU0=
 github.com/bits-and-blooms/bitset v1.14.2 h1:YXVoyPndbdvcEVcseEovVfp0qjJp7S+i5+xgp/Nfbdc=
