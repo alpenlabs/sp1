@@ -1569,11 +1569,11 @@ pub mod tests {
         // let bytes = bincode::serialize(&wrapped_bn254_proof).unwrap();
 
         // // Save the proof.
-        // let mut file = File::create("proof-with-pis.bin").unwrap();
+        // let mut file = File::create("proof-with-pis-wrap.bin").unwrap();
         // file.write_all(bytes.as_slice()).unwrap();
 
         // Load the proof.
-        let mut file = File::open("proof-with-pis_bls.bin").unwrap();
+        let mut file = File::open("proof-with-pis-wrap.bin").unwrap();
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes).unwrap();
 
@@ -1598,6 +1598,7 @@ pub mod tests {
         let vk_digest_bn254 = sp1_vkey_digest_bn254(&wrapped_bn254_proof);
         assert_eq!(vk_digest_bn254, vk.hash_bn254());
 
+        tracing::warn!("vk_digest_bn254 {:?}", vk_digest_bn254);
         // tracing::info!("Test the outer Plonk circuit");
         // let (constraints, witness) =
         //     build_constraints_and_witness(&wrapped_bn254_proof.vk, &wrapped_bn254_proof.proof);

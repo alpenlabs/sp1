@@ -137,6 +137,7 @@ pub fn build_constraints_and_witness(
         words_to_bytes(&pv.committed_value_digest).try_into().unwrap();
     let committed_values_digest = babybear_bytes_to_bn254(&committed_values_digest_bytes);
 
+    tracing::warn!("committed values digest {:?}", committed_values_digest);
     tracing::info!("building template witness");
     let mut witness = OuterWitness::default();
     template_input.write(&mut witness);
