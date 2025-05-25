@@ -7,7 +7,7 @@ use itertools::Itertools;
 use p3_baby_bear::BabyBear;
 use p3_field::{AbstractField, Field};
 
-use p3_bls12_fr::Bls12Fr;
+use p3_sect_fr::SectFr;
 use p3_symmetric::Permutation;
 use sp1_recursion_compiler::{
     circuit::CircuitV2Builder,
@@ -159,22 +159,22 @@ impl<C: CircuitConfig<F = BabyBear, Bit = Felt<BabyBear>>> FieldHasherVariable<C
 pub const BN254_DIGEST_SIZE: usize = 1;
 
 impl FieldHasher<BabyBear> for BabyBearPoseidon2Outer {
-    type Digest = [Bls12Fr; BN254_DIGEST_SIZE];
+    type Digest = [SectFr; BN254_DIGEST_SIZE];
 
     fn constant_compress(input: [Self::Digest; 2]) -> Self::Digest {
-        let mut state = [input[0][0], input[1][0], Bls12Fr::zero()];
+        let mut state = [input[0][0], input[1][0], SectFr::zero()];
         outer_perm().permute_mut(&mut state);
         [state[0]; BN254_DIGEST_SIZE]
     }
 }
 
-impl<C: CircuitConfig<F = BabyBear, N = Bls12Fr, Bit = Var<Bls12Fr>>> FieldHasherVariable<C>
+impl<C: CircuitConfig<F = BabyBear, N = SectFr, Bit = Var<SectFr>>> FieldHasherVariable<C>
     for BabyBearPoseidon2Outer
 {
-    type DigestVariable = [Var<Bls12Fr>; BN254_DIGEST_SIZE];
+    type DigestVariable = [Var<SectFr>; BN254_DIGEST_SIZE];
 
     fn hash(builder: &mut Builder<C>, input: &[Felt<<C as Config>::F>]) -> Self::DigestVariable {
-        assert!(C::N::bits() == p3_bls12_fr::Bls12Fr::bits());
+        assert!(C::N::bits() == p3_sect_fr::SectFr::bits());
         assert!(C::F::bits() == p3_baby_bear::BabyBear::bits());
         let num_f_elms = C::N::bits() / C::F::bits();
         let mut state: [Var<C::N>; OUTER_MULTI_FIELD_CHALLENGER_WIDTH] =

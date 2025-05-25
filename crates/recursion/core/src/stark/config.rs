@@ -1,5 +1,4 @@
 use p3_baby_bear::BabyBear;
-use p3_bls12_fr::{Bls12Fr, DiffusionMatrixBLS12};
 use p3_challenger::MultiField32Challenger;
 use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
@@ -10,6 +9,7 @@ use p3_fri::{
 };
 use p3_merkle_tree::FieldMerkleTreeMmcs;
 use p3_poseidon2::{Poseidon2, Poseidon2ExternalMatrixGeneral};
+use p3_sect_fr::{DiffusionMatrixSECT, SectFr};
 use p3_symmetric::{Hash, MultiField32PaddingFreeSponge, TruncatedPermutation};
 use serde::{Deserialize, Serialize};
 use sp1_stark::{Com, StarkGenericConfig, ZeroCommitment};
@@ -25,18 +25,17 @@ pub const OUTER_MULTI_FIELD_CHALLENGER_DIGEST_SIZE: usize = 1;
 /// A configuration for outer recursion.
 pub type OuterVal = BabyBear;
 pub type OuterChallenge = BinomialExtensionField<OuterVal, 4>;
-pub type OuterPerm = Poseidon2<Bls12Fr, Poseidon2ExternalMatrixGeneral, DiffusionMatrixBLS12, 3, 5>;
-pub type OuterHash =
-    MultiField32PaddingFreeSponge<OuterVal, Bls12Fr, OuterPerm, 3, 16, DIGEST_SIZE>;
-pub type OuterDigestHash = Hash<OuterVal, Bls12Fr, DIGEST_SIZE>;
-pub type OuterDigest = [Bls12Fr; DIGEST_SIZE];
+pub type OuterPerm = Poseidon2<SectFr, Poseidon2ExternalMatrixGeneral, DiffusionMatrixSECT, 3, 5>;
+pub type OuterHash = MultiField32PaddingFreeSponge<OuterVal, SectFr, OuterPerm, 3, 16, DIGEST_SIZE>;
+pub type OuterDigestHash = Hash<OuterVal, SectFr, DIGEST_SIZE>;
+pub type OuterDigest = [SectFr; DIGEST_SIZE];
 pub type OuterCompress = TruncatedPermutation<OuterPerm, 2, 1, 3>;
-pub type OuterValMmcs = FieldMerkleTreeMmcs<BabyBear, Bls12Fr, OuterHash, OuterCompress, 1>;
+pub type OuterValMmcs = FieldMerkleTreeMmcs<BabyBear, SectFr, OuterHash, OuterCompress, 1>;
 pub type OuterChallengeMmcs = ExtensionMmcs<OuterVal, OuterChallenge, OuterValMmcs>;
 pub type OuterDft = Radix2DitParallel;
 pub type OuterChallenger = MultiField32Challenger<
     OuterVal,
-    Bls12Fr,
+    SectFr,
     OuterPerm,
     OUTER_MULTI_FIELD_CHALLENGER_WIDTH,
     OUTER_MULTI_FIELD_CHALLENGER_RATE,
@@ -66,7 +65,7 @@ pub fn outer_perm() -> OuterPerm {
         Poseidon2ExternalMatrixGeneral,
         ROUNDS_P,
         internal_round_constants,
-        DiffusionMatrixBLS12,
+        DiffusionMatrixSECT,
     )
 }
 
@@ -179,7 +178,7 @@ impl StarkGenericConfig for BabyBearPoseidon2Outer {
 
 impl ZeroCommitment<BabyBearPoseidon2Outer> for OuterPcs {
     fn zero_commitment(&self) -> Com<BabyBearPoseidon2Outer> {
-        OuterDigestHash::from([Bls12Fr::zero(); DIGEST_SIZE])
+        OuterDigestHash::from([SectFr::zero(); DIGEST_SIZE])
     }
 }
 

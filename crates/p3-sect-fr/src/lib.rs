@@ -1,5 +1,6 @@
-//! The scalar field of the BLS12 curve, defined as `F_r` where `r = 52435875175126190479447740508185965837690552500527637822603658699938581184513`.
+//! The scalar field of the SECT curve, defined as `F_r` where `r = 3450873173395281893717377931138512760570940988862252126328087024741343`.
 
+pub mod params;
 mod poseidon2;
 
 use core::fmt;
@@ -11,31 +12,31 @@ use core::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub, SubAssign};
 use ff::{Field as FFField, PrimeField as FFPrimeField, PrimeFieldBits};
 use num_bigint::BigUint;
 use p3_field::{AbstractField, Field, Packable, PrimeField};
-pub use poseidon2::DiffusionMatrixBLS12;
+pub use poseidon2::DiffusionMatrixSECT;
 use rand::distributions::{Distribution, Standard};
 use rand::Rng;
 use serde::ser::SerializeSeq;
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(FFPrimeField)]
-#[PrimeFieldModulus = "52435875175126190479447740508185965837690552500527637822603658699938581184513"]
-#[PrimeFieldGenerator = "7"]
+#[PrimeFieldModulus = "3450873173395281893717377931138512760570940988862252126328087024741343"]
+#[PrimeFieldGenerator = "3"]
 #[PrimeFieldReprEndianness = "little"]
-pub struct FFBls12Fr([u64; 4]);
+pub struct FFSectFr([u64; 4]);
 
-/// The BLS12 curve scalar field prime, defined as `F_r` where `r = 52435875175126190479447740508185965837690552500527637822603658699938581184513`.
+/// The SECT curve scalar field prime, defined as `F_r` where `r = 3450873173395281893717377931138512760570940988862252126328087024741343`.
 #[derive(Copy, Clone, Default, Eq, PartialEq)]
-pub struct Bls12Fr {
-    pub value: FFBls12Fr,
+pub struct SectFr {
+    pub value: FFSectFr,
 }
 
-impl Bls12Fr {
-    pub(crate) const fn new(value: FFBls12Fr) -> Self {
+impl SectFr {
+    pub(crate) const fn new(value: FFSectFr) -> Self {
         Self { value }
     }
 }
 
-impl Serialize for Bls12Fr {
+impl Serialize for SectFr {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let repr = self.value.to_repr();
         let bytes = repr.as_ref();
@@ -48,17 +49,17 @@ impl Serialize for Bls12Fr {
     }
 }
 
-impl<'de> Deserialize<'de> for Bls12Fr {
+impl<'de> Deserialize<'de> for SectFr {
     fn deserialize<D: Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
         let bytes: Vec<u8> = Deserialize::deserialize(d)?;
 
-        let mut res = <FFBls12Fr as FFPrimeField>::Repr::default();
+        let mut res = <FFSectFr as FFPrimeField>::Repr::default();
 
         for (i, digit) in res.0.as_mut().iter_mut().enumerate() {
             *digit = bytes[i];
         }
 
-        let value = FFBls12Fr::from_repr(res);
+        let value = FFSectFr::from_repr(res);
 
         if value.is_some().into() {
             Ok(Self { value: value.unwrap() })
@@ -68,9 +69,9 @@ impl<'de> Deserialize<'de> for Bls12Fr {
     }
 }
 
-impl Packable for Bls12Fr {}
+impl Packable for SectFr {}
 
-impl Hash for Bls12Fr {
+impl Hash for SectFr {
     fn hash<H: Hasher>(&self, state: &mut H) {
         for byte in self.value.to_repr().as_ref().iter() {
             state.write_u8(*byte);
@@ -78,45 +79,45 @@ impl Hash for Bls12Fr {
     }
 }
 
-impl Ord for Bls12Fr {
+impl Ord for SectFr {
     fn cmp(&self, other: &Self) -> core::cmp::Ordering {
         self.value.cmp(&other.value)
     }
 }
 
-impl PartialOrd for Bls12Fr {
+impl PartialOrd for SectFr {
     fn partial_cmp(&self, other: &Self) -> Option<core::cmp::Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Display for Bls12Fr {
+impl Display for SectFr {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        <FFBls12Fr as Debug>::fmt(&self.value, f)
+        <FFSectFr as Debug>::fmt(&self.value, f)
     }
 }
 
-impl Debug for Bls12Fr {
+impl Debug for SectFr {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Debug::fmt(&self.value, f)
     }
 }
 
-impl AbstractField for Bls12Fr {
+impl AbstractField for SectFr {
     type F = Self;
 
     fn zero() -> Self {
-        Self::new(FFBls12Fr::ZERO)
+        Self::new(FFSectFr::ZERO)
     }
     fn one() -> Self {
-        Self::new(FFBls12Fr::ONE)
+        Self::new(FFSectFr::ONE)
     }
     fn two() -> Self {
-        Self::new(FFBls12Fr::from(2u64))
+        Self::new(FFSectFr::from(2u64))
     }
 
     fn neg_one() -> Self {
-        Self::new(FFBls12Fr::ZERO - FFBls12Fr::ONE)
+        Self::new(FFSectFr::ZERO - FFSectFr::ONE)
     }
 
     #[inline]
@@ -125,43 +126,43 @@ impl AbstractField for Bls12Fr {
     }
 
     fn from_bool(b: bool) -> Self {
-        Self::new(FFBls12Fr::from(b as u64))
+        Self::new(FFSectFr::from(b as u64))
     }
 
     fn from_canonical_u8(n: u8) -> Self {
-        Self::new(FFBls12Fr::from(n as u64))
+        Self::new(FFSectFr::from(n as u64))
     }
 
     fn from_canonical_u16(n: u16) -> Self {
-        Self::new(FFBls12Fr::from(n as u64))
+        Self::new(FFSectFr::from(n as u64))
     }
 
     fn from_canonical_u32(n: u32) -> Self {
-        Self::new(FFBls12Fr::from(n as u64))
+        Self::new(FFSectFr::from(n as u64))
     }
 
     fn from_canonical_u64(n: u64) -> Self {
-        Self::new(FFBls12Fr::from(n))
+        Self::new(FFSectFr::from(n))
     }
 
     fn from_canonical_usize(n: usize) -> Self {
-        Self::new(FFBls12Fr::from(n as u64))
+        Self::new(FFSectFr::from(n as u64))
     }
 
     fn from_wrapped_u32(n: u32) -> Self {
-        Self::new(FFBls12Fr::from(n as u64))
+        Self::new(FFSectFr::from(n as u64))
     }
 
     fn from_wrapped_u64(n: u64) -> Self {
-        Self::new(FFBls12Fr::from(n))
+        Self::new(FFSectFr::from(n))
     }
 
     fn generator() -> Self {
-        Self::new(FFBls12Fr::from(7u64))
+        Self::new(FFSectFr::from(3u64))
     }
 }
 
-impl Field for Bls12Fr {
+impl Field for SectFr {
     type Packing = Self;
 
     fn is_zero(&self) -> bool {
@@ -179,12 +180,12 @@ impl Field for Bls12Fr {
     }
 
     fn order() -> BigUint {
-        let bytes = FFBls12Fr::char_le_bits();
+        let bytes = FFSectFr::char_le_bits();
         BigUint::from_bytes_le(bytes.as_raw_slice())
     }
 }
 
-impl PrimeField for Bls12Fr {
+impl PrimeField for SectFr {
     fn as_canonical_biguint(&self) -> BigUint {
         let repr = self.value.to_repr();
         let le_bytes = repr.as_ref();
@@ -192,7 +193,7 @@ impl PrimeField for Bls12Fr {
     }
 }
 
-impl Add for Bls12Fr {
+impl Add for SectFr {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self {
@@ -200,19 +201,19 @@ impl Add for Bls12Fr {
     }
 }
 
-impl AddAssign for Bls12Fr {
+impl AddAssign for SectFr {
     fn add_assign(&mut self, rhs: Self) {
         self.value += rhs.value;
     }
 }
 
-impl Sum for Bls12Fr {
+impl Sum for SectFr {
     fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.reduce(|x, y| x + y).unwrap_or(Self::zero())
     }
 }
 
-impl Sub for Bls12Fr {
+impl Sub for SectFr {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self {
@@ -220,13 +221,13 @@ impl Sub for Bls12Fr {
     }
 }
 
-impl SubAssign for Bls12Fr {
+impl SubAssign for SectFr {
     fn sub_assign(&mut self, rhs: Self) {
         self.value -= rhs.value;
     }
 }
 
-impl Neg for Bls12Fr {
+impl Neg for SectFr {
     type Output = Self;
 
     fn neg(self) -> Self::Output {
@@ -234,7 +235,7 @@ impl Neg for Bls12Fr {
     }
 }
 
-impl Mul for Bls12Fr {
+impl Mul for SectFr {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self {
@@ -242,19 +243,19 @@ impl Mul for Bls12Fr {
     }
 }
 
-impl MulAssign for Bls12Fr {
+impl MulAssign for SectFr {
     fn mul_assign(&mut self, rhs: Self) {
         self.value *= rhs.value;
     }
 }
 
-impl Product for Bls12Fr {
+impl Product for SectFr {
     fn product<I: Iterator<Item = Self>>(iter: I) -> Self {
         iter.reduce(|x, y| x * y).unwrap_or(Self::one())
     }
 }
 
-impl Div for Bls12Fr {
+impl Div for SectFr {
     type Output = Self;
 
     #[allow(clippy::suspicious_arithmetic_impl)]
@@ -263,66 +264,75 @@ impl Div for Bls12Fr {
     }
 }
 
-impl Distribution<Bls12Fr> for Standard {
+impl Distribution<SectFr> for Standard {
     #[inline]
-    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> Bls12Fr {
-        Bls12Fr::new(FFBls12Fr::random(rng))
+    fn sample<R: Rng + ?Sized>(&self, rng: &mut R) -> SectFr {
+        SectFr::new(FFSectFr::random(rng))
     }
 }
+
+use ark_ff::fields::{Fp256, MontBackend, MontConfig};
+use std::convert::TryInto;
+
+#[derive(MontConfig)]
+#[modulus = "3450873173395281893717377931138512760570940988862252126328087024741343"]
+#[generator = "3"]
+pub struct FqConfig;
+pub type FpSECT = Fp256<MontBackend<FqConfig, 4>>;
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use num_traits::One;
 
-    type F = Bls12Fr;
+    type F = SectFr;
 
     #[test]
-    fn test_bls12fr() {
-        let f = F::new(FFBls12Fr::from_u128(100));
+    fn test_sectfr() {
+        let f = F::new(FFSectFr::from_u128(100));
         assert_eq!(f.as_canonical_biguint(), BigUint::new(vec![100]));
 
         let f = F::from_canonical_u64(0);
         assert!(f.is_zero());
 
-        let f = F::new(FFBls12Fr::from_str_vartime(&F::order().to_str_radix(10)).unwrap());
+        let f = F::new(FFSectFr::from_str_vartime(&F::order().to_str_radix(10)).unwrap());
         assert!(f.is_zero());
 
-        assert_eq!(F::generator().as_canonical_biguint(), BigUint::new(vec![7]));
+        assert_eq!(F::generator().as_canonical_biguint(), BigUint::new(vec![3]));
 
-        let f_1 = F::new(FFBls12Fr::from_u128(1));
-        let f_1_copy = F::new(FFBls12Fr::from_u128(1));
+        let f_1 = F::new(FFSectFr::from_u128(1));
+        let f_1_copy = F::new(FFSectFr::from_u128(1));
 
         let expected_result = F::zero();
         assert_eq!(f_1 - f_1_copy, expected_result);
 
-        let expected_result = F::new(FFBls12Fr::from_u128(2));
+        let expected_result = F::new(FFSectFr::from_u128(2));
         assert_eq!(f_1 + f_1_copy, expected_result);
 
-        let f_2 = F::new(FFBls12Fr::from_u128(2));
-        let expected_result = F::new(FFBls12Fr::from_u128(3));
+        let f_2 = F::new(FFSectFr::from_u128(2));
+        let expected_result = F::new(FFSectFr::from_u128(3));
         assert_eq!(f_1 + f_1_copy * f_2, expected_result);
 
-        let expected_result = F::new(FFBls12Fr::from_u128(5));
+        let expected_result = F::new(FFSectFr::from_u128(5));
         assert_eq!(f_1 + f_2 * f_2, expected_result);
 
         let f_r_minus_1 = F::new(
-            FFBls12Fr::from_str_vartime(&(F::order() - BigUint::one()).to_str_radix(10)).unwrap(),
+            FFSectFr::from_str_vartime(&(F::order() - BigUint::one()).to_str_radix(10)).unwrap(),
         );
         let expected_result = F::zero();
         assert_eq!(f_1 + f_r_minus_1, expected_result);
 
         let f_r_minus_2 = F::new(
-            FFBls12Fr::from_str_vartime(&(F::order() - BigUint::new(vec![2])).to_str_radix(10))
+            FFSectFr::from_str_vartime(&(F::order() - BigUint::new(vec![2])).to_str_radix(10))
                 .unwrap(),
         );
         let expected_result = F::new(
-            FFBls12Fr::from_str_vartime(&(F::order() - BigUint::new(vec![3])).to_str_radix(10))
+            FFSectFr::from_str_vartime(&(F::order() - BigUint::new(vec![3])).to_str_radix(10))
                 .unwrap(),
         );
         assert_eq!(f_r_minus_1 + f_r_minus_2, expected_result);
 
-        let expected_result = F::new(FFBls12Fr::from_u128(1));
+        let expected_result = F::new(FFSectFr::from_u128(1));
         assert_eq!(f_r_minus_1 - f_r_minus_2, expected_result);
 
         let expected_result = f_r_minus_1;
@@ -331,11 +341,11 @@ mod tests {
         let expected_result = f_r_minus_2;
         assert_eq!(f_r_minus_1 - f_1, expected_result);
 
-        let expected_result = F::new(FFBls12Fr::from_u128(3));
+        let expected_result = F::new(FFSectFr::from_u128(3));
         assert_eq!(f_2 * f_2 - f_1, expected_result);
 
         // Generator check
-        let expected_multiplicative_group_generator = F::new(FFBls12Fr::from_u128(7));
+        let expected_multiplicative_group_generator = F::new(FFSectFr::from_u128(3));
         assert_eq!(F::generator(), expected_multiplicative_group_generator);
 
         let f_serialized = serde_json::to_string(&f).unwrap();

@@ -1,37 +1,37 @@
 use p3_baby_bear::BabyBear;
-use p3_bls12_fr::Bls12Fr;
 use p3_field::{AbstractField, PrimeField32};
+use p3_sect_fr::SectFr;
 
 use sp1_recursion_compiler::ir::{Builder, Config, Felt, Var};
 use sp1_recursion_core::{DIGEST_SIZE, NUM_BITS};
 
 use sp1_stark::Word;
 
-/// Convert 8 BabyBear words into a Bls12Fr field element by shifting by 28 bits each time. The last
+/// Convert 8 BabyBear words into a SectFr field element by shifting by 28 bits each time. The last
 /// word becomes the least significant bits.
 #[allow(dead_code)]
-pub fn babybears_to_bn254(digest: &[BabyBear; 8]) -> Bls12Fr {
-    let mut result = Bls12Fr::zero();
+pub fn babybears_to_bn254(digest: &[BabyBear; 8]) -> SectFr {
+    let mut result = SectFr::zero();
     for word in digest.iter() {
         // Since BabyBear prime is less than 2^31, we can shift by 28 bits each time and still be
-        // within the Bls12Fr field, we truncate the top 3 bits everytime.
+        // within the SectFr field, we truncate the top 3 bits everytime.
         // so total size of result in the end is 8 x 28 = 224 bits
-        result *= Bls12Fr::from_canonical_u64(1 << 28); // shift by 28
+        result *= SectFr::from_canonical_u64(1 << 28); // shift by 28
         let masked_val_u32 = word.as_canonical_u32() & 0x0FFFFFFF; // mask top 3-bits
-        result += Bls12Fr::from_canonical_u32(masked_val_u32); // add 28 bits
+        result += SectFr::from_canonical_u32(masked_val_u32); // add 28 bits
     }
     result
 }
 
-/// Convert 32 BabyBear bytes into a Bls12Fr field element. All byte's most significant 1 bit is masked (truncated)
+/// Convert 32 BabyBear bytes into a SectFr field element. All byte's most significant 1 bit is masked (truncated)
 #[allow(dead_code)]
-pub fn babybear_bytes_to_bn254(bytes: &[BabyBear; 32]) -> Bls12Fr {
-    let mut result = Bls12Fr::zero();
+pub fn babybear_bytes_to_bn254(bytes: &[BabyBear; 32]) -> SectFr {
+    let mut result = SectFr::zero();
     for byte in bytes.iter() {
-        result *= Bls12Fr::from_canonical_u32(128); // shift by 7 bits
+        result *= SectFr::from_canonical_u32(128); // shift by 7 bits
         let masked = byte.as_canonical_u32() & 0x7f;
         debug_assert!(masked < 128);
-        result += Bls12Fr::from_canonical_u32(masked); // add 7-bit
+        result += SectFr::from_canonical_u32(masked); // add 7-bit
     }
     result
 }
