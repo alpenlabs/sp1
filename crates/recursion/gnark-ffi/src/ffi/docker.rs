@@ -1,6 +1,6 @@
 use crate::{Groth16Bn254Proof, PlonkBn254Proof, ProofBn254, SP1_CIRCUIT_VERSION};
 use anyhow::{anyhow, Result};
-use std::{io::Write, process::Command};
+use std::{fs::File, io::Write, path::Path, process::Command};
 
 /// Represents the proof system being used
 enum ProofSystem {
@@ -47,9 +47,33 @@ fn call_docker(args: &[&str], mounts: &[(&str, &str)]) -> Result<()> {
     for (src, dest) in mounts {
         cmd.arg("-v").arg(format!("{}:{}", src, dest));
     }
-    cmd.arg("-v").arg(format!("{}:{}", "/Users/manishbista/.sp1/circuits/r1cs_temp", "/r1cs_temp"));
-    cmd.arg("-v")
-        .arg(format!("{}:{}", "/Users/manishbista/.sp1/circuits/witness_temp", "/witness_temp"));
+
+    let home = std::env::home_dir().expect("Failed to find the home directory.");
+    let circuits_dir = home.join(".sp1/circuits");
+    let r1cs_to_dvsnark_path = circuits_dir.join("r1cs_to_dvsnark");
+    let r1cs_cached_path = circuits_dir.join("r1cs_cached");
+    let witness_to_dvsnark_path = circuits_dir.join("witness_to_dvsnark");
+
+    let paths_to_create = [&r1cs_to_dvsnark_path, &r1cs_cached_path, &witness_to_dvsnark_path];
+
+    // Iterate over the paths and create a file if it doesn't exist.
+    for path in &paths_to_create {
+        if !path.exists() {
+            // File::create will create the file or truncate it if it exists.
+            // Since we check for existence first, it will only create it.
+            File::create(path)?;
+            println!("Created file: {:?}", path);
+        }
+    }
+
+    cmd.arg("-v").arg(format!("{}:{}", r1cs_to_dvsnark_path.to_string_lossy(), "/r1cs_to_dvsnark"));
+    cmd.arg("-v").arg(format!("{}:{}", r1cs_cached_path.to_string_lossy(), "/r1cs_cached"));
+    cmd.arg("-v").arg(format!(
+        "{}:{}",
+        witness_to_dvsnark_path.to_string_lossy(),
+        "/witness_to_dvsnark"
+    ));
+
     cmd.arg("sp1-gnark:latest"); // replace with modified image sp1-gnark:latest
     cmd.args(args);
     println!("Command {:?}", cmd);

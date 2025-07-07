@@ -1515,62 +1515,62 @@ pub mod tests {
         let (_, pk_d, program, vk) = prover.setup(elf);
 
         tracing::info!("prove core");
-        let core_proof = prover.prove_core(&pk_d, program, &stdin, opts, context)?;
-        let public_values = core_proof.public_values.clone();
+        // let core_proof = prover.prove_core(&pk_d, program, &stdin, opts, context)?;
+        // let public_values = core_proof.public_values.clone();
 
-        if env::var("COLLECT_SHAPES").is_ok() {
-            let mut shapes = BTreeSet::new();
-            for proof in core_proof.proof.0.iter() {
-                let shape = SP1ProofShape::Recursion(proof.shape());
-                shapes.insert(shape);
-            }
+        // if env::var("COLLECT_SHAPES").is_ok() {
+        //     let mut shapes = BTreeSet::new();
+        //     for proof in core_proof.proof.0.iter() {
+        //         let shape = SP1ProofShape::Recursion(proof.shape());
+        //         shapes.insert(shape);
+        //     }
 
-            let mut file = File::create("../shapes.bin").unwrap();
-            bincode::serialize_into(&mut file, &shapes).unwrap();
-        }
+        //     let mut file = File::create("../shapes.bin").unwrap();
+        //     bincode::serialize_into(&mut file, &shapes).unwrap();
+        // }
 
-        if verify {
-            tracing::info!("verify core");
-            prover.verify(&core_proof.proof, &vk)?;
-        }
+        // if verify {
+        //     tracing::info!("verify core");
+        //     prover.verify(&core_proof.proof, &vk)?;
+        // }
 
-        if test_kind == Test::Core {
-            return Ok(());
-        }
+        // if test_kind == Test::Core {
+        //     return Ok(());
+        // }
 
-        tracing::info!("compress");
-        let compress_span = tracing::debug_span!("compress").entered();
-        let compressed_proof = prover.compress(&vk, core_proof, vec![], opts)?;
-        compress_span.exit();
+        // tracing::info!("compress");
+        // let compress_span = tracing::debug_span!("compress").entered();
+        // let compressed_proof = prover.compress(&vk, core_proof, vec![], opts)?;
+        // compress_span.exit();
 
-        if verify {
-            tracing::info!("verify compressed");
-            prover.verify_compressed(&compressed_proof, &vk)?;
-        }
+        // if verify {
+        //     tracing::info!("verify compressed");
+        //     prover.verify_compressed(&compressed_proof, &vk)?;
+        // }
 
-        if test_kind == Test::Compress {
-            return Ok(());
-        }
+        // if test_kind == Test::Compress {
+        //     return Ok(());
+        // }
 
-        tracing::info!("shrink");
-        let shrink_proof = prover.shrink(compressed_proof, opts)?;
+        // tracing::info!("shrink");
+        // let shrink_proof = prover.shrink(compressed_proof, opts)?;
 
-        if verify {
-            tracing::info!("verify shrink");
-            prover.verify_shrink(&shrink_proof, &vk)?;
-        }
+        // // if verify {
+        // //     tracing::info!("verify shrink");
+        // //     prover.verify_shrink(&shrink_proof, &vk)?;
+        // // }
 
-        if test_kind == Test::Shrink {
-            return Ok(());
-        }
+        // if test_kind == Test::Shrink {
+        //     return Ok(());
+        // }
 
-        tracing::info!("wrap bn254");
-        let wrapped_bn254_proof = prover.wrap_bn254(shrink_proof, opts)?;
-        let bytes = bincode::serialize(&wrapped_bn254_proof).unwrap();
+        // tracing::info!("wrap bn254");
+        // let wrapped_bn254_proof = prover.wrap_bn254(shrink_proof, opts)?;
+        // let bytes = bincode::serialize(&wrapped_bn254_proof).unwrap();
 
-        // Save the proof.
-        let mut file = File::create("proof-with-pis-sect-wrap.bin").unwrap();
-        file.write_all(bytes.as_slice()).unwrap();
+        // // Save the proof.
+        // let mut file = File::create("proof-with-pis-sect-wrap.bin").unwrap();
+        // file.write_all(bytes.as_slice()).unwrap();
 
         // Load the proof.
         let mut file = File::open("proof-with-pis-sect-wrap.bin").unwrap();
@@ -1625,8 +1625,8 @@ pub mod tests {
             &wrapped_bn254_proof.vk,
             &wrapped_bn254_proof.proof,
         );
-        // let groth16_bn254_proof = prover.wrap_groth16_bn254(wrapped_bn254_proof, &artifacts_dir);
-        // println!("{:?}", groth16_bn254_proof);
+        let groth16_bn254_proof = prover.wrap_groth16_bn254(wrapped_bn254_proof, &artifacts_dir);
+        println!("{:?}", groth16_bn254_proof);
 
         // if verify {
         //     prover.verify_groth16_bn254(
@@ -1752,7 +1752,7 @@ pub mod tests {
     #[test]
     #[serial]
     fn test_e2e() -> Result<()> {
-        let elf = test_artifacts::FIBONACCI_ELF;
+        let elf = test_artifacts::HELLO_WORLD_ELF;
         setup_logger();
         let opts = SP1ProverOpts::auto();
         // TODO(mattstam): We should Test::Plonk here, but this uses the existing

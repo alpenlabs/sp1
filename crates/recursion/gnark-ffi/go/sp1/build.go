@@ -382,40 +382,57 @@ func BuildGroth16(dataDir string) {
 	}
 
 	{
-		r1cs_fn := "/r1cs_temp"
-		file, err := os.Create(r1cs_fn) // os.Create returns an *os.File, which implements io.Writer
+		r1cs_fn := "/r1cs_cached"
+		file, err := os.Create(r1cs_fn)
 		if err != nil {
 			log.Fatalf("Failed to create file: %v", err)
 		}
-		defer file.Close() // Ensure the file is closed when main exits
+		defer file.Close()
 
-		Dump(r1cs, file)
-
-		assignment := NewCircuit(witnessInput)
-		witness, err := frontend.NewWitness(&assignment, fr.Modulus())
-		if err != nil {
-			panic(err)
-		}
-		_solution, err := r1cs.Solve(witness)
+		bytesWritten, err := r1cs.WriteTo(file)
 		if err != nil {
 			panic("err is not nil for solve")
 		}
-		solution := _solution.(*bcs.R1CSSolution)
+		fmt.Printf("Successfully wrote %d bytes to %s\n", bytesWritten, r1cs_fn)
+	}
 
-		witness_fn := "/witness_temp"
-		wfile, err := os.Create(witness_fn) // os.Create returns an *os.File, which implements io.Writer
+	{
+		r1cs_fn := "/r1cs_to_dvsnark"
+		file, err := os.Create(r1cs_fn)
 		if err != nil {
 			log.Fatalf("Failed to create file: %v", err)
 		}
-		defer wfile.Close() // Ensure the file is closed when main exits
+		defer file.Close()
 
-		bytesWritten, err := solution.W.WriteTo(wfile)
-		if err != nil {
-			log.Fatalf("Failed to write to file: %v", err)
-		}
-
-		fmt.Printf("Successfully wrote %d bytes to %s\n", bytesWritten, witness_fn)
+		Dump(r1cs, file)
 	}
+
+	// {
+	// 	assignment := NewCircuit(witnessInput)
+	// 	witness, err := frontend.NewWitness(&assignment, fr.Modulus())
+	// 	if err != nil {
+	// 		panic(err)
+	// 	}
+	// 	_solution, err := r1cs.Solve(witness)
+	// 	if err != nil {
+	// 		panic("err is not nil for solve")
+	// 	}
+	// 	solution := _solution.(*bcs.R1CSSolution)
+
+	// 	witness_fn := "/witness_to_dvsnark"
+	// 	wfile, err := os.Create(witness_fn)
+	// 	if err != nil {
+	// 		log.Fatalf("Failed to create file: %v", err)
+	// 	}
+	// 	defer wfile.Close()
+
+	// 	bytesWritten, err := solution.W.WriteTo(wfile)
+	// 	if err != nil {
+	// 		log.Fatalf("Failed to write to file: %v", err)
+	// 	}
+
+	// 	fmt.Printf("Successfully wrote %d bytes to %s\n", bytesWritten, witness_fn)
+	// }
 
 	// // Generate the proving and verifying key.
 	// pk, vk, err := groth16.Setup(r1cs)

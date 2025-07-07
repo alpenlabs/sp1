@@ -4,14 +4,17 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"sync"
 	"time"
 
 	"github.com/consensys/gnark-crypto/ecc"
+	fr "github.com/consensys/gnark-crypto/ecc/sect/fr"
 	"github.com/consensys/gnark/backend/groth16"
 	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/constraint"
+	bcs "github.com/consensys/gnark/constraint/sect"
 	"github.com/consensys/gnark/frontend"
 )
 
@@ -95,11 +98,79 @@ func ProvePlonk(dataDir string, witnessPath string) Proof {
 	return NewSP1PlonkBn254Proof(&proof, witnessInput)
 }
 
+func SaveWitnessToFile(dataDir string, witnessPath string) {
+
+	r1cs_fn := "/r1cs_cached"
+	file, err := os.Open(r1cs_fn)
+	if err != nil {
+		log.Fatalf("Failed to create file: %v", err)
+	}
+	var r1cs bcs.R1CS
+	bytesRead, err := r1cs.ReadFrom(file)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Successfully read %d bytes from %s\n", bytesRead, r1cs_fn)
+
+	start := time.Now()
+	// Read the file.
+	witnessInputPath := dataDir + "/" + groth16WitnessPath
+	data, err := os.ReadFile(witnessInputPath)
+	if err != nil {
+		panic(err)
+	}
+
+	start = time.Now()
+	// Deserialize the JSON data into a slice of Instruction structs
+	var witnessInput WitnessInput
+	err = json.Unmarshal(data, &witnessInput)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Deserializing JSON data took %s\n", time.Since(start))
+
+	start = time.Now()
+	// Generate the witness.
+	assignment := NewCircuit(witnessInput)
+	witness, err := frontend.NewWitness(&assignment, fr.Modulus())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Generating witness took %s\n", time.Since(start))
+
+	_solution, err := r1cs.Solve(witness)
+	if err != nil {
+		panic(err)
+	}
+	solution := _solution.(*bcs.R1CSSolution)
+
+	witness_fn := "/witness_to_dvsnark"
+	wfile, err := os.Create(witness_fn)
+	if err != nil {
+		log.Fatalf("Failed to create file: %v", err)
+	}
+	defer wfile.Close()
+
+	bytesWritten, err := solution.W.WriteTo(wfile)
+	if err != nil {
+		log.Fatalf("Failed to write to file: %v", err)
+	}
+
+	fmt.Printf("Successfully wrote %d bytes to %s\n", bytesWritten, witness_fn)
+
+}
+
 func ProveGroth16(dataDir string, witnessPath string) Proof {
 	// Sanity check the required arguments have been provided.
 	if dataDir == "" {
 		panic("dataDirStr is required")
 	}
+
+	fmt.Println("start SaveWitnessToFile")
+
+	SaveWitnessToFile(dataDir, witnessPath)
+
+	fmt.Println("finished SaveWitnessToFile")
 
 	start := time.Now()
 	os.Setenv("CONSTRAINTS_JSON", dataDir+"/"+constraintsJsonFile)

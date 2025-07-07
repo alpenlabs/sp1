@@ -291,7 +291,7 @@ func TestMain() error {
 	}
 
 	{
-		r1cs_fn := "/r1cs_temp"
+		r1cs_fn := "/r1cs_to_dvsnark"
 		file, err := os.Create(r1cs_fn) // os.Create returns an *os.File, which implements io.Writer
 		if err != nil {
 			log.Fatalf("Failed to create file: %v", err)
@@ -311,7 +311,7 @@ func TestMain() error {
 		}
 		solution := _solution.(*bcs.R1CSSolution)
 
-		witness_fn := "/witness_temp"
+		witness_fn := "/witness_to_dvsnark"
 		wfile, err := os.Create(witness_fn) // os.Create returns an *os.File, which implements io.Writer
 		if err != nil {
 			log.Fatalf("Failed to create file: %v", err)

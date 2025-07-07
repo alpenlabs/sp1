@@ -167,7 +167,7 @@ mod tests {
         stdin.write(&10usize);
 
         // Generate proof & verify.
-        let mut proof = client.prove(&pk, &stdin).plonk().run().unwrap();
+        let mut proof = client.prove(&pk, &stdin).groth16().run().unwrap();
         client.verify(&proof, &vk).unwrap();
 
         // Test invalid public values.
