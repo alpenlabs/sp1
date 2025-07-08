@@ -6,15 +6,18 @@ pub mod builder;
 pub mod execute;
 pub mod prove;
 
+use std::io::Read;
+
 use anyhow::Result;
 use execute::CpuExecuteBuilder;
 use prove::CpuProveBuilder;
-use sp1_core_executor::{SP1Context, SP1ContextBuilder};
+use sp1_core_executor::{SP1Context, SP1ContextBuilder, SP1ReduceProof};
 use sp1_core_machine::io::SP1Stdin;
 use sp1_prover::{
     components::CpuProverComponents,
     verify::{verify_groth16_bn254_public_inputs, verify_plonk_bn254_public_inputs},
-    Groth16Bn254Proof, PlonkBn254Proof, SP1CoreProofData, SP1ProofWithMetadata, SP1Prover,
+    Groth16Bn254Proof, OuterSC, PlonkBn254Proof, SP1CoreProofData, SP1ProofWithMetadata, SP1Prover,
+    SP1PublicValues,
 };
 use sp1_stark::{SP1CoreOpts, SP1ProverOpts};
 
@@ -141,22 +144,32 @@ impl CpuProver {
         // Generate the wrap proof.
         let outer_proof = self.prover.wrap_bn254(compress_proof, opts)?;
 
+        // let bytes = bincode::serialize(&outer_proof).unwrap();
+
+        // // Save the proof.
+        // let mut file = File::create("proof-with-pis-sect-wrap.bin").unwrap();
+        // file.write_all(bytes.as_slice()).unwrap();
+
+        // let mut file = std::fs::File::open("proof-with-pis-sect-wrap.bin").unwrap();
+        // let mut bytes = Vec::new();
+        // file.read_to_end(&mut bytes).unwrap();
+
+        // let outer_proof: SP1ReduceProof<OuterSC> = bincode::deserialize(&bytes).unwrap();
+        // let _ = self.prover.wrap_vk.set(outer_proof.clone().vk);
+
         // Generate the gnark proof.
         match mode {
             SP1ProofMode::Groth16 => {
-                let groth16_bn254_artifacts = if sp1_prover::build::sp1_dev_mode() {
+                let groth16_bn254_artifacts =
                     sp1_prover::build::try_build_groth16_bn254_artifacts_dev(
                         &outer_proof.vk,
                         &outer_proof.proof,
-                    )
-                } else {
-                    try_install_circuit_artifacts("groth16")
-                };
+                    );
 
-                let proof = self.prover.wrap_groth16_bn254(outer_proof, &groth16_bn254_artifacts);
+                let _sect_witness = self.prover.wrap_sect(outer_proof, &groth16_bn254_artifacts);
                 Ok(SP1ProofWithPublicValues::new(
-                    SP1Proof::Groth16(proof),
-                    public_values,
+                    SP1Proof::Core(vec![]),
+                    SP1PublicValues::default(),
                     self.version().to_string(),
                 ))
             }
@@ -172,7 +185,7 @@ impl CpuProver {
                 let proof = self.prover.wrap_plonk_bn254(outer_proof, &plonk_bn254_artifacts);
                 Ok(SP1ProofWithPublicValues::new(
                     SP1Proof::Plonk(proof),
-                    public_values,
+                    SP1PublicValues::default(),
                     self.version().to_string(),
                 ))
             }

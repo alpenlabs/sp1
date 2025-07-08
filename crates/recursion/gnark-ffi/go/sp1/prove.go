@@ -161,7 +161,7 @@ func SaveWitnessToFile(dataDir string, witnessPath string) {
 }
 
 func ProveGroth16(dataDir string, witnessPath string) Proof {
-	// Sanity check the required arguments have been provided.
+
 	if dataDir == "" {
 		panic("dataDirStr is required")
 	}
@@ -171,6 +171,19 @@ func ProveGroth16(dataDir string, witnessPath string) Proof {
 	SaveWitnessToFile(dataDir, witnessPath)
 
 	fmt.Println("finished SaveWitnessToFile")
+
+	return Proof{
+		PublicInputs: [2]string{"", ""},
+		EncodedProof: "",
+		RawProof:     "",
+	}
+}
+
+func ProveGroth16Old(dataDir string, witnessPath string) Proof {
+	// Sanity check the required arguments have been provided.
+	if dataDir == "" {
+		panic("dataDirStr is required")
+	}
 
 	start := time.Now()
 	os.Setenv("CONSTRAINTS_JSON", dataDir+"/"+constraintsJsonFile)

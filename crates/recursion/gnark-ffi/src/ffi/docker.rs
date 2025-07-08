@@ -131,6 +131,10 @@ pub fn prove_groth16_bn254(data_dir: &str, witness_path: &str) -> Groth16Bn254Pr
     }
 }
 
+pub fn prove_witness_sect(data_dir: &str, witness_path: &str) {
+    let _ = prove(ProofSystem::Groth16, data_dir, witness_path);
+}
+
 fn build(system: ProofSystem, data_dir: &str) -> Result<()> {
     let circuit_dir = if data_dir.ends_with("dev") { "/circuit_dev" } else { "/circuit" };
     let mounts = [(data_dir, circuit_dir)];

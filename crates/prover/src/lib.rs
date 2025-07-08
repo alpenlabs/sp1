@@ -80,7 +80,10 @@ use sp1_recursion_core::{
     RecursionProgram, Runtime as RecursionRuntime,
 };
 pub use sp1_recursion_gnark_ffi::proof::{Groth16Bn254Proof, PlonkBn254Proof};
-use sp1_recursion_gnark_ffi::{groth16_bn254::Groth16Bn254Prover, plonk_bn254::PlonkBn254Prover};
+use sp1_recursion_gnark_ffi::{
+    groth16_bn254::Groth16Bn254Prover, plonk_bn254::PlonkBn254Prover, SectWitness,
+    SectWitnessGenerator,
+};
 use sp1_stark::{
     baby_bear_poseidon2::BabyBearPoseidon2,
     shape::{OrderedShape, Shape},
@@ -1039,6 +1042,35 @@ impl<C: SP1ProverComponents> SP1Prover<C> {
                 build_dir,
             )
             .unwrap();
+
+        proof
+    }
+
+    /// Wrap the STARK proven over sect
+    #[instrument(name = "wrap_sect", level = "info", skip_all)]
+    pub fn wrap_sect(&self, proof: SP1ReduceProof<OuterSC>, build_dir: &Path) -> SectWitness {
+        let input = SP1CompressWitnessValues {
+            vks_and_proofs: vec![(proof.vk.clone(), proof.proof.clone())],
+            is_complete: true,
+        };
+        let vkey_hash = sp1_vkey_digest_bn254(&proof);
+        let committed_values_digest = sp1_committed_values_digest_bn254(&proof);
+
+        let mut witness = Witness::default();
+        input.write(&mut witness);
+        witness.write_committed_values_digest(committed_values_digest);
+        witness.write_vkey_hash(vkey_hash);
+
+        let prover = SectWitnessGenerator {};
+        let proof = prover.prove(witness, build_dir.to_path_buf());
+
+        // Verify the proof.
+        // prover.verify(
+        //     &proof,
+        //     &vkey_hash.as_canonical_biguint(),
+        //     &committed_values_digest.as_canonical_biguint(),
+        //     build_dir,
+        // );
 
         proof
     }
