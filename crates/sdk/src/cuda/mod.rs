@@ -10,7 +10,7 @@ use prove::CudaProveBuilder;
 use sp1_core_executor::SP1ContextBuilder;
 use sp1_core_machine::io::SP1Stdin;
 use sp1_cuda::{MoongateServer, SP1CudaProver};
-use sp1_prover::{components::CpuProverComponents, SP1Prover};
+use sp1_prover::{components::CpuProverComponents, SP1Prover, SP1PublicValues};
 
 use crate::{
     cpu::execute::CpuExecuteBuilder, install::try_install_circuit_artifacts, Prover, SP1Proof,
@@ -137,19 +137,32 @@ impl CudaProver {
             );
             return Ok((proof_with_pv, cycles));
         } else if kind == SP1ProofMode::Groth16 {
-            let groth16_bn254_artifacts = if sp1_prover::build::sp1_dev_mode() {
-                sp1_prover::build::try_build_groth16_bn254_artifacts_dev(
-                    &outer_proof.vk,
-                    &outer_proof.proof,
-                )
-            } else {
-                try_install_circuit_artifacts("groth16")
-            };
+            // let groth16_bn254_artifacts = if sp1_prover::build::sp1_dev_mode() {
+            //     sp1_prover::build::try_build_groth16_bn254_artifacts_dev(
+            //         &outer_proof.vk,
+            //         &outer_proof.proof,
+            //     )
+            // } else {
+            //     try_install_circuit_artifacts("groth16")
+            // };
 
-            let proof = self.cpu_prover.wrap_groth16_bn254(outer_proof, &groth16_bn254_artifacts);
+            // let proof = self.cpu_prover.wrap_groth16_bn254(outer_proof, &groth16_bn254_artifacts);
+            // let proof_with_pv = SP1ProofWithPublicValues::new(
+            //     SP1Proof::Groth16(proof),
+            //     public_values,
+            //     self.version().to_string(),
+            // );
+            // return Ok((proof_with_pv, cycles));
+
+            let groth16_bn254_artifacts = sp1_prover::build::try_build_groth16_bn254_artifacts_dev(
+                &outer_proof.vk,
+                &outer_proof.proof,
+            );
+
+            let _sect_witness = self.cpu_prover.wrap_sect(outer_proof, &groth16_bn254_artifacts);
             let proof_with_pv = SP1ProofWithPublicValues::new(
-                SP1Proof::Groth16(proof),
-                public_values,
+                SP1Proof::Core(vec![]),
+                SP1PublicValues::default(),
                 self.version().to_string(),
             );
             return Ok((proof_with_pv, cycles));
