@@ -160,7 +160,7 @@ mod tests {
     #[test]
     fn test_e2e_prove_plonk() {
         utils::setup_logger();
-        let client = ProverClient::builder().cuda().build();
+        let client = ProverClient::builder().cpu().build();
         let elf = test_artifacts::HELLO_WORLD_ELF;
         let (pk, vk) = client.setup(elf);
         let stdin = SP1Stdin::default();
