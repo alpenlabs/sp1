@@ -12,12 +12,16 @@ use sp1_stark::Word;
 #[allow(dead_code)]
 pub fn babybears_to_bn254(digest: &[BabyBear; 8]) -> SectFr {
     let mut result = SectFr::zero();
-    for word in digest.iter() {
+    for (idx, word) in digest.iter().enumerate() {
         // Since BabyBear prime is less than 2^31, we can shift by 28 bits each time and still be
         // within the SectFr field, we truncate the top 3 bits everytime.
         // so total size of result in the end is 8 x 28 = 224 bits
-        result *= SectFr::from_canonical_u64(1 << 28); // shift by 28
-        let masked_val_u32 = word.as_canonical_u32() & 0x0FFFFFFF; // mask top 3-bits
+        result *= SectFr::from_canonical_u64(1 << 32); // shift by 28
+        let masked_val_u32 = if idx == 0 {
+            0 // mask top 3-bits
+        } else {
+            word.as_canonical_u32()
+        };
         result += SectFr::from_canonical_u32(masked_val_u32); // add 28 bits
     }
     result
@@ -27,10 +31,9 @@ pub fn babybears_to_bn254(digest: &[BabyBear; 8]) -> SectFr {
 #[allow(dead_code)]
 pub fn babybear_bytes_to_bn254(bytes: &[BabyBear; 32]) -> SectFr {
     let mut result = SectFr::zero();
-    for byte in bytes.iter() {
-        result *= SectFr::from_canonical_u32(128); // shift by 7 bits
-        let masked = byte.as_canonical_u32() & 0x7f;
-        debug_assert!(masked < 128);
+    for (idx, byte) in bytes.iter().enumerate() {
+        result *= SectFr::from_canonical_u32(256); // shift by 7 bits
+        let masked = if idx < 4 { 0 } else { byte.as_canonical_u32() };
         result += SectFr::from_canonical_u32(masked); // add 7-bit
     }
     result
@@ -41,21 +44,21 @@ pub fn felts_to_bn254_var<C: Config>(
     builder: &mut Builder<C>,
     digest: &[Felt<C::F>; DIGEST_SIZE],
 ) -> Var<C::N> {
-    let var_2_28: Var<_> = builder.constant(C::N::from_canonical_u32(1 << 28));
+    let var_2_32: Var<_> = builder.constant(C::N::from_canonical_u64(1 << 32));
     let result = builder.constant(C::N::zero());
     let zero_var: Var<_> = builder.constant(C::N::zero());
 
     for (i, word) in digest.iter().enumerate() {
         let all_bits: Vec<Var<C::N>> = builder.num2bits_f_circuit(*word);
-        for j in 0..3 {
-            // mask 30, 29, 28'th positions leaving 0-27 untouched; thus masking all but 28 bits
-            builder.assign(all_bits[NUM_BITS - j - 1], zero_var);
-        }
-        let word_var = builder.bits2num_v_circuit(&all_bits);
+        // for j in 0..3 {
+        //     // mask 30, 29, 28'th positions leaving 0-27 untouched; thus masking all but 28 bits
+        //     builder.assign(all_bits[NUM_BITS - j - 1], zero_var);
+        // }
+        let word_var = if i == 0 { zero_var } else { builder.bits2num_v_circuit(&all_bits) };
         if i == 0 {
             builder.assign(result, word_var);
         } else {
-            builder.assign(result, result * var_2_28 + word_var);
+            builder.assign(result, result * var_2_32 + word_var);
         }
     }
     result
@@ -66,20 +69,20 @@ pub fn felt_bytes_to_bn254_var<C: Config>(
     builder: &mut Builder<C>,
     bytes: &[Felt<C::F>; 32],
 ) -> Var<C::N> {
-    let var_128: Var<_> = builder.constant(C::N::from_canonical_u32(128));
+    let var_256: Var<_> = builder.constant(C::N::from_canonical_u32(256));
     let zero_var: Var<_> = builder.constant(C::N::zero());
     let result = builder.constant(C::N::zero());
     for (i, byte) in bytes.iter().enumerate() {
         let byte_bits = builder.num2bits_f_circuit(*byte);
         // mask top 1-bit
-        for j in 0..1 {
-            builder.assign(byte_bits[8 - j - 1], zero_var);
-        }
-        let byte_var = builder.bits2num_v_circuit(&byte_bits);
+        // for j in 0..1 {
+        //     builder.assign(byte_bits[8 - j - 1], zero_var);
+        // }
+        let byte_var = if i < 4 { zero_var } else { builder.bits2num_v_circuit(&byte_bits) };
         if i == 0 {
             builder.assign(result, byte_var);
         } else {
-            builder.assign(result, result * var_128 + byte_var);
+            builder.assign(result, result * var_256 + byte_var);
         }
     }
     result

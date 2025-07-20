@@ -127,12 +127,16 @@ pub fn words_to_bytes<T: Copy>(words: &[Word<T>]) -> Vec<T> {
 /// word becomes the least significant bits.
 pub fn babybears_to_bn254(digest: &[BabyBear; 8]) -> SectFr {
     let mut result = SectFr::zero();
-    for word in digest.iter() {
+    for (idx, word) in digest.iter().enumerate() {
         // Since BabyBear prime is less than 2^31, we can shift by 28 bits each time and still be
         // within the SectFr field, we truncate the top 3 bits everytime.
         // so total size of result in the end is 8 x 28 = 224 bits
-        result *= SectFr::from_canonical_u64(1 << 28); // shift by 28
-        let masked_val_u32 = word.as_canonical_u32() & 0x0FFFFFFF; // mask top 3-bits
+        result *= SectFr::from_canonical_u64(1 << 32); // shift by 28
+        let masked_val_u32 = if idx == 0 {
+            0 // mask top 3-bits
+        } else {
+            word.as_canonical_u32()
+        };
         result += SectFr::from_canonical_u32(masked_val_u32); // add 28 bits
     }
     result
@@ -142,10 +146,9 @@ pub fn babybears_to_bn254(digest: &[BabyBear; 8]) -> SectFr {
 /// (which would become the 3 most significant bits) are truncated.
 pub fn babybear_bytes_to_bn254(bytes: &[BabyBear; 32]) -> SectFr {
     let mut result = SectFr::zero();
-    for byte in bytes.iter() {
-        result *= SectFr::from_canonical_u32(128); // shift by 7 bits
-        let masked = byte.as_canonical_u32() & 0x7f;
-        debug_assert!(masked < 128);
+    for (idx, byte) in bytes.iter().enumerate() {
+        result *= SectFr::from_canonical_u32(256); // shift by 7 bits
+        let masked = if idx < 4 { 0 } else { byte.as_canonical_u32() };
         result += SectFr::from_canonical_u32(masked); // add 7-bit
     }
     result

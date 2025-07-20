@@ -99,6 +99,7 @@ impl CpuProver {
         }
     }
 
+    #[allow(clippy::print_stdout)]
     pub(crate) fn prove_impl<'a>(
         &'a self,
         pk: &SP1ProvingKey,
@@ -117,6 +118,7 @@ impl CpuProver {
         // Generate the core proof.
         let proof: SP1ProofWithMetadata<SP1CoreProofData> =
             self.prover.prove_core(&pk.pk, program, stdin, opts, context)?;
+        println!("public values {:?}", proof.public_values);
         if mode == SP1ProofMode::Core {
             return Ok(SP1ProofWithPublicValues::new(
                 SP1Proof::Core(proof.proof.0),
