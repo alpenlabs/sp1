@@ -253,15 +253,10 @@ func BuildPlonk(dataDir string) {
 // It is functionally identical to the original version but batches I/O
 // through an internal bufio.Writer and uses raw little-endian encodes for
 // scalars to avoid reflection overhead in binary.Write.
-func Dump(cs constraint.ConstraintSystem, w io.Writer) error {
+func Dump(r1cs *bcs.R1CS, w io.Writer) error {
 	// Wrap the destination with a large buffered writer (1 MiB; tune as needed).
 	bw := bufio.NewWriterSize(w, 1<<20)
 	defer bw.Flush() // ensure everything is pushed downstream
-
-	r1cs, ok := cs.(*bcs.R1CS)
-	if !ok {
-		return fmt.Errorf("unsupported constraint system type %T", cs)
-	}
 
 	coeffs := r1cs.Coefficients
 	rows := r1cs.GetR1Cs()
@@ -327,7 +322,52 @@ func Dump(cs constraint.ConstraintSystem, w io.Writer) error {
 	return bw.Flush() // explicit flush + propagate any error
 }
 
+func DumpR1CSIfItExists() bool {
+	// Check input exists
+	if stat, err := os.Stat("/r1cs_cached"); err != nil {
+		// doesn't exist or not accessible
+		return false
+	} else if stat.Size() < 1024 {
+		return false
+	}
+
+	// Open input
+	r1cs_fn := "/r1cs_cached"
+	file, err := os.Open(r1cs_fn)
+	if err != nil {
+		log.Fatalf("Failed to create file: %v", err)
+	}
+	var r1cs bcs.R1CS
+	bytesRead, err := r1cs.ReadFrom(file)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("Successfully read %d bytes from %s\n", bytesRead, r1cs_fn)
+
+	// Create output
+	new_r1cs_fn := "/r1cs_to_dvsnark"
+	new_file, err := os.Create(new_r1cs_fn)
+	if err != nil {
+		log.Fatalf("Failed to create file: %v", err)
+	}
+	defer new_file.Close()
+
+	log.Printf("DumpR1CSIfItExists; Dump to file %s", new_r1cs_fn)
+	err = Dump(&r1cs, new_file)
+	if err != nil {
+		log.Fatalf("Failed to dump to file: %v", err)
+	}
+
+	return true
+}
+
 func BuildGroth16(dataDir string) {
+	r1cs_dumped := DumpR1CSIfItExists()
+	if r1cs_dumped {
+		fmt.Println("r1cs_cache already exists, converted to format r1cs_to_dvsnark")
+		return
+	}
+
 	// Set the environment variable for the constraints file.
 	//
 	// TODO: There might be some non-determinism if a single process is running this command
@@ -404,7 +444,8 @@ func BuildGroth16(dataDir string) {
 		}
 		defer file.Close()
 
-		Dump(r1cs, file)
+		r1cs_contr := r1cs.(*bcs.R1CS)
+		Dump(r1cs_contr, file)
 	}
 
 	// {
