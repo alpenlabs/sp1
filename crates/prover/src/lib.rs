@@ -1046,6 +1046,7 @@ impl<C: SP1ProverComponents> SP1Prover<C> {
         proof
     }
 
+    #[allow(clippy::print_stdout)]
     /// Wrap the STARK proven over sect
     #[instrument(name = "wrap_sect", level = "info", skip_all)]
     pub fn wrap_sect(&self, proof: SP1ReduceProof<OuterSC>, build_dir: &Path) -> SectWitness {
@@ -1061,6 +1062,8 @@ impl<C: SP1ProverComponents> SP1Prover<C> {
         witness.write_committed_values_digest(committed_values_digest);
         witness.write_vkey_hash(vkey_hash);
 
+        println!("vkey_hash {:?}", vkey_hash);
+        println!("committed_values_digest {:?}", committed_values_digest);
         let prover = SectWitnessGenerator {};
         let proof = prover.prove(witness, build_dir.to_path_buf());
 

@@ -98,7 +98,7 @@ func ProvePlonk(dataDir string, witnessPath string) Proof {
 	return NewSP1PlonkBn254Proof(&proof, witnessInput)
 }
 
-func SaveWitnessToFile(dataDir string, witnessPath string) {
+func SaveWitnessToFile(witnessPath string) {
 
 	r1cs_fn := "/r1cs_cached"
 	file, err := os.Open(r1cs_fn)
@@ -114,8 +114,7 @@ func SaveWitnessToFile(dataDir string, witnessPath string) {
 
 	start := time.Now()
 	// Read the file.
-	witnessInputPath := dataDir + "/" + groth16WitnessPath
-	data, err := os.ReadFile(witnessInputPath)
+	data, err := os.ReadFile(witnessPath)
 	if err != nil {
 		panic(err)
 	}
@@ -162,13 +161,9 @@ func SaveWitnessToFile(dataDir string, witnessPath string) {
 
 func ProveGroth16(dataDir string, witnessPath string) Proof {
 
-	if dataDir == "" {
-		panic("dataDirStr is required")
-	}
-
 	fmt.Println("start SaveWitnessToFile")
 
-	SaveWitnessToFile(dataDir, witnessPath)
+	SaveWitnessToFile(witnessPath)
 
 	fmt.Println("finished SaveWitnessToFile")
 
