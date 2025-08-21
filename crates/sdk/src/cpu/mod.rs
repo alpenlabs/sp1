@@ -118,7 +118,6 @@ impl CpuProver {
         // Generate the core proof.
         let proof: SP1ProofWithMetadata<SP1CoreProofData> =
             self.prover.prove_core(&pk.pk, program, stdin, opts, context)?;
-        println!("public values {:?}", proof.public_values);
         if mode == SP1ProofMode::Core {
             return Ok(SP1ProofWithPublicValues::new(
                 SP1Proof::Core(proof.proof.0),
@@ -130,6 +129,7 @@ impl CpuProver {
         // Generate the compressed proof.
         let deferred_proofs =
             stdin.proofs.iter().map(|(reduce_proof, _)| reduce_proof.clone()).collect();
+        println!("public values {:?}", proof.public_values);
         let public_values = proof.public_values.clone();
         let reduce_proof = self.prover.compress(&pk.vk, proof, deferred_proofs, opts)?;
         if mode == SP1ProofMode::Compressed {
@@ -171,7 +171,7 @@ impl CpuProver {
                 let _sect_witness = self.prover.wrap_sect(outer_proof, &groth16_bn254_artifacts);
                 Ok(SP1ProofWithPublicValues::new(
                     SP1Proof::Core(vec![]),
-                    SP1PublicValues::default(),
+                    public_values,
                     self.version().to_string(),
                 ))
             }
