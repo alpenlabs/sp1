@@ -34,6 +34,12 @@ impl SectFr {
     pub(crate) const fn new(value: FFSectFr) -> Self {
         Self { value }
     }
+
+    pub fn to_biguint(value: FFSectFr) -> BigUint {
+        let repr = value.to_repr();
+        let le_bytes = repr.as_ref();
+        BigUint::from_bytes_le(le_bytes)
+    }
 }
 
 impl Serialize for SectFr {
