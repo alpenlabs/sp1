@@ -6,8 +6,6 @@ pub mod builder;
 pub mod execute;
 pub mod prove;
 
-use std::io::Read;
-
 use anyhow::Result;
 use execute::CpuExecuteBuilder;
 use prove::CpuProveBuilder;
@@ -16,10 +14,10 @@ use sp1_core_machine::io::SP1Stdin;
 use sp1_prover::{
     components::CpuProverComponents,
     verify::{verify_groth16_bn254_public_inputs, verify_plonk_bn254_public_inputs},
-    Groth16Bn254Proof, OuterSC, PlonkBn254Proof, SP1CoreProofData, SP1ProofWithMetadata, SP1Prover,
+    Groth16Bn254Proof, PlonkBn254Proof, SP1CoreProofData, SP1ProofWithMetadata, SP1Prover,
     SP1PublicValues,
 };
-use sp1_stark::{SP1CoreOpts, SP1ProverOpts};
+use sp1_stark::{baby_bear_poseidon2::BabyBearPoseidon2, SP1CoreOpts, SP1ProverOpts};
 
 use crate::{
     install::try_install_circuit_artifacts, prover::verify_proof, Prover, SP1Proof, SP1ProofMode,
@@ -96,6 +94,7 @@ impl CpuProver {
             core_opts: SP1CoreOpts::default(),
             recursion_opts: SP1CoreOpts::recursion(),
             mock: self.mock,
+            init_with_compressed: false,
         }
     }
 
@@ -107,38 +106,49 @@ impl CpuProver {
         opts: SP1ProverOpts,
         context: SP1Context<'a>,
         mode: SP1ProofMode,
+        input_is_compressed_proof: bool,
     ) -> Result<SP1ProofWithPublicValues> {
-        let program = self.prover.get_program(&pk.elf).unwrap();
+        println!("input_is_compressed_proof {input_is_compressed_proof}");
+        let reduce_proof = if input_is_compressed_proof {
+            let compressed_proof_bytes = &stdin.buffer;
+            assert_eq!(compressed_proof_bytes.len(), 1);
+            let reduce_proof: SP1ReduceProof<BabyBearPoseidon2> =
+                serde_json::from_slice(&compressed_proof_bytes[0])?;
+            reduce_proof
+        } else {
+            let program = self.prover.get_program(&pk.elf).unwrap();
 
-        // If we're in mock mode, return a mock proof.
-        if self.mock {
-            return self.mock_prove_impl(pk, stdin, context, mode);
-        }
+            // If we're in mock mode, return a mock proof.
+            if self.mock {
+                return self.mock_prove_impl(pk, stdin, context, mode);
+            }
 
-        // Generate the core proof.
-        let proof: SP1ProofWithMetadata<SP1CoreProofData> =
-            self.prover.prove_core(&pk.pk, program, stdin, opts, context)?;
-        if mode == SP1ProofMode::Core {
-            return Ok(SP1ProofWithPublicValues::new(
-                SP1Proof::Core(proof.proof.0),
-                proof.public_values,
-                self.version().to_string(),
-            ));
-        }
+            // Generate the core proof.
+            let proof: SP1ProofWithMetadata<SP1CoreProofData> =
+                self.prover.prove_core(&pk.pk, program, stdin, opts, context)?;
+            println!("public values {:?}", proof.public_values);
+            if mode == SP1ProofMode::Core {
+                return Ok(SP1ProofWithPublicValues::new(
+                    SP1Proof::Core(proof.proof.0),
+                    proof.public_values,
+                    self.version().to_string(),
+                ));
+            }
 
-        // Generate the compressed proof.
-        let deferred_proofs =
-            stdin.proofs.iter().map(|(reduce_proof, _)| reduce_proof.clone()).collect();
-        println!("public values {:?}", proof.public_values);
-        let public_values = proof.public_values.clone();
-        let reduce_proof = self.prover.compress(&pk.vk, proof, deferred_proofs, opts)?;
-        if mode == SP1ProofMode::Compressed {
-            return Ok(SP1ProofWithPublicValues::new(
-                SP1Proof::Compressed(Box::new(reduce_proof)),
-                public_values,
-                self.version().to_string(),
-            ));
-        }
+            // Generate the compressed proof.
+            let deferred_proofs =
+                stdin.proofs.iter().map(|(reduce_proof, _)| reduce_proof.clone()).collect();
+            let public_values = proof.public_values.clone();
+            let reduce_proof = self.prover.compress(&pk.vk, proof, deferred_proofs, opts)?;
+            if mode == SP1ProofMode::Compressed {
+                return Ok(SP1ProofWithPublicValues::new(
+                    SP1Proof::Compressed(Box::new(reduce_proof)),
+                    public_values,
+                    self.version().to_string(),
+                ));
+            };
+            reduce_proof
+        };
 
         // Generate the shrink proof.
         let compress_proof = self.prover.shrink(reduce_proof, opts)?;
@@ -171,7 +181,7 @@ impl CpuProver {
                 let _sect_witness = self.prover.wrap_sect(outer_proof, &groth16_bn254_artifacts);
                 Ok(SP1ProofWithPublicValues::new(
                     SP1Proof::Core(vec![]),
-                    public_values,
+                    SP1PublicValues::default(),
                     self.version().to_string(),
                 ))
             }
@@ -240,7 +250,7 @@ impl Prover<CpuProverComponents> for CpuProver {
         stdin: &SP1Stdin,
         mode: SP1ProofMode,
     ) -> Result<SP1ProofWithPublicValues> {
-        self.prove_impl(pk, stdin, SP1ProverOpts::default(), SP1Context::default(), mode)
+        self.prove_impl(pk, stdin, SP1ProverOpts::default(), SP1Context::default(), mode, false)
     }
 
     fn verify(

@@ -1,6 +1,6 @@
 use crate::{Groth16Bn254Proof, PlonkBn254Proof, ProofBn254, SP1_CIRCUIT_VERSION};
 use anyhow::{anyhow, Result};
-use std::{fs::File, io::Write, path::Path, process::Command};
+use std::{fs::File, io::Write, process::Command};
 
 /// Represents the proof system being used
 enum ProofSystem {
@@ -40,7 +40,7 @@ fn get_docker_image() -> String {
 /// Note: files created here by `call_docker` are read-only for after the process exits.
 /// To fix this, manually set the docker user to the current user by supplying a `-u` flag.
 fn call_docker(args: &[&str], mounts: &[(&str, &str)]) -> Result<()> {
-    println!("Calling docer {:?}", args);
+    tracing::info!("Calling docer {:?}", args);
     tracing::info!("Running {} in docker", args[0]);
     let mut cmd = Command::new("docker");
     cmd.args(["run"]);
@@ -62,7 +62,7 @@ fn call_docker(args: &[&str], mounts: &[(&str, &str)]) -> Result<()> {
             // File::create will create the file or truncate it if it exists.
             // Since we check for existence first, it will only create it.
             File::create(path)?;
-            println!("Created file: {:?}", path);
+            tracing::info!("Created file: {:?}", path);
         }
     }
 
@@ -76,7 +76,7 @@ fn call_docker(args: &[&str], mounts: &[(&str, &str)]) -> Result<()> {
 
     cmd.arg("sp1-gnark:latest"); // replace with modified image sp1-gnark:latest
     cmd.args(args);
-    println!("Command {:?}", cmd);
+    tracing::info!("Command {:?}", cmd);
     let result = cmd.output()?;
     if !result.status.success() {
         let stderr = String::from_utf8_lossy(&result.stderr);

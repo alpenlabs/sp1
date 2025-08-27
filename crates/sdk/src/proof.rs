@@ -172,6 +172,7 @@ impl SP1ProofWithPublicValues {
 
                 [groth16_proof.groth16_vkey_hash[..4].to_vec(), proof_bytes].concat()
             }
+            SP1Proof::Compressed(compressed_proof) => serde_json::to_vec(compressed_proof).unwrap(),
             proof => panic!(
                 "Proof type {proof} is not supported for onchain verification. \
                 Only Plonk and Groth16 proofs are verifiable onchain"

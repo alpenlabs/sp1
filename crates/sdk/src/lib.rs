@@ -69,6 +69,7 @@ mod tests {
     use sp1_primitives::io::SP1PublicValues;
 
     use crate::{utils, Prover, ProverClient, SP1Stdin};
+    use sp1_prover::HashableKey;
 
     #[test]
     fn test_execute() {
@@ -164,11 +165,20 @@ mod tests {
         let client = ProverClient::builder().cpu().build();
         let elf = test_artifacts::FIBONACCI_BLAKE3_ELF;
         let (pk, vk) = client.setup(elf);
+        println!("verification key {:?}", vk.hash_bn254());
         let stdin = SP1Stdin::default();
-        //stdin.write(&10usize);
+        let proof = client.prove(&pk, &stdin).compressed().run().unwrap();
 
-        // Generate proof & verify.
-        let mut proof = client.prove(&pk, &stdin).groth16().run().unwrap();
+        let compressed_proof_bytes = proof.bytes();
+
+        println!("len outside {:?}", compressed_proof_bytes.len());
+        let mut st = SP1Stdin::default();
+        st.write_slice(&compressed_proof_bytes);
+        let client = ProverClient::builder().cpu().build();
+        let elf = test_artifacts::FIBONACCI_BLAKE3_ELF;
+        let (pk, vk) = client.setup(elf);
+        let proof = client.prove(&pk, &st).groth16_with_compressed().run().unwrap();
+
         //client.verify(&proof, &vk).unwrap();
 
         // Test invalid public values.
