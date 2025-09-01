@@ -1,22 +1,26 @@
-//! The scalar field of the SECT curve, defined as `F_r` where `r = 3450873173395281893717377931138512760570940988862252126328087024741343`.
+//! The scalar field of the SECT curve, defined as `F_r` where `r =
+//! 3450873173395281893717377931138512760570940988862252126328087024741343`.
 
 pub mod params;
 mod poseidon2;
 
-use core::fmt;
-use core::fmt::{Debug, Display, Formatter};
-use core::hash::{Hash, Hasher};
-use core::iter::{Product, Sum};
-use core::ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub, SubAssign};
+use core::{
+    fmt,
+    fmt::{Debug, Display, Formatter},
+    hash::{Hash, Hasher},
+    iter::{Product, Sum},
+    ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Sub, SubAssign},
+};
 
 use ff::{Field as FFField, PrimeField as FFPrimeField, PrimeFieldBits};
 use num_bigint::BigUint;
 use p3_field::{AbstractField, Field, Packable, PrimeField};
 pub use poseidon2::DiffusionMatrixSECT;
-use rand::distributions::{Distribution, Standard};
-use rand::Rng;
-use serde::ser::SerializeSeq;
-use serde::{Deserialize, Deserializer, Serialize};
+use rand::{
+    distributions::{Distribution, Standard},
+    Rng,
+};
+use serde::{ser::SerializeSeq, Deserialize, Deserializer, Serialize};
 
 #[derive(FFPrimeField)]
 #[PrimeFieldModulus = "3450873173395281893717377931138512760570940988862252126328087024741343"]
@@ -24,7 +28,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 #[PrimeFieldReprEndianness = "little"]
 pub struct FFSectFr([u64; 4]);
 
-/// The SECT curve scalar field prime, defined as `F_r` where `r = 3450873173395281893717377931138512760570940988862252126328087024741343`.
+/// The SECT curve scalar field prime, defined as `F_r` where `r =
+/// 3450873173395281893717377931138512760570940988862252126328087024741343`.
 #[derive(Copy, Clone, Default, Eq, PartialEq)]
 pub struct SectFr {
     pub value: FFSectFr,

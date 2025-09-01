@@ -27,7 +27,8 @@ pub fn babybears_to_bn254(digest: &[BabyBear; 8]) -> SectFr {
     result
 }
 
-/// Convert 32 BabyBear bytes into a SectFr field element. All byte's most significant 1 bit is masked (truncated)
+/// Convert 32 BabyBear bytes into a SectFr field element. All byte's most significant 1 bit is
+/// masked (truncated)
 #[allow(dead_code)]
 pub fn babybear_bytes_to_bn254(bytes: &[BabyBear; 32]) -> SectFr {
     let mut result = SectFr::zero();

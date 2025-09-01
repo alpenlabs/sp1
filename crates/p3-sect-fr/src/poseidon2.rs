@@ -30,13 +30,17 @@ impl<AF: AbstractField<F = SectFr>> DiffusionPermutation<AF, 3> for DiffusionMat
 
 #[cfg(test)]
 mod tests {
-    use crate::params::{POSEIDON2_SECT_PARAMS, RC3};
-    use crate::FpSECT as ark_FpBN256;
+    use crate::{
+        params::{POSEIDON2_SECT_PARAMS, RC3},
+        FpSECT as ark_FpBN256,
+    };
     use ff::PrimeField;
     use p3_poseidon2::{Poseidon2, Poseidon2ExternalMatrixHL};
     use rand::Rng;
-    use zkhash::ark_ff::{BigInteger, PrimeField as ark_PrimeField};
-    use zkhash::poseidon2::poseidon2::Poseidon2 as Poseidon2Ref;
+    use zkhash::{
+        ark_ff::{BigInteger, PrimeField as ark_PrimeField},
+        poseidon2::poseidon2::Poseidon2 as Poseidon2Ref,
+    };
 
     use super::*;
     use crate::FFSectFr;

@@ -1,7 +1,7 @@
 use std::borrow::Borrow;
 
-use p3_sect_fr::SectFr;
 use p3_field::AbstractField;
+use p3_sect_fr::SectFr;
 
 use p3_fri::{CommitPhaseProofStep, QueryProof};
 pub use sp1_recursion_compiler::ir::Witness as OuterWitness;

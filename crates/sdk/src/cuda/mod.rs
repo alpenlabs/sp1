@@ -146,9 +146,9 @@ impl CudaProver {
             //     try_install_circuit_artifacts("groth16")
             // };
 
-            // let proof = self.cpu_prover.wrap_groth16_bn254(outer_proof, &groth16_bn254_artifacts);
-            // let proof_with_pv = SP1ProofWithPublicValues::new(
-            //     SP1Proof::Groth16(proof),
+            // let proof = self.cpu_prover.wrap_groth16_bn254(outer_proof,
+            // &groth16_bn254_artifacts); let proof_with_pv =
+            // SP1ProofWithPublicValues::new(     SP1Proof::Groth16(proof),
             //     public_values,
             //     self.version().to_string(),
             // );

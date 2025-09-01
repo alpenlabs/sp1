@@ -435,9 +435,9 @@ pub(crate) mod tests {
         utils::tests::run_test_recursion,
     };
     use p3_baby_bear::BabyBear;
-    use p3_sect_fr::SectFr;
     use p3_challenger::{CanObserve, CanSample, CanSampleBits, FieldChallenger};
     use p3_field::AbstractField;
+    use p3_sect_fr::SectFr;
     use p3_symmetric::{CryptographicHasher, Hash, PseudoCompressionFunction};
     use sp1_recursion_compiler::{
         circuit::{AsmBuilder, AsmConfig},

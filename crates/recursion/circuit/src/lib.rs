@@ -6,9 +6,9 @@ use challenger::{
 };
 use hash::{FieldHasherVariable, Posedion2BabyBearHasherVariable};
 use itertools::izip;
-use p3_sect_fr::SectFr;
 use p3_field::AbstractField;
 use p3_matrix::dense::RowMajorMatrix;
+use p3_sect_fr::SectFr;
 use sp1_recursion_compiler::{
     circuit::CircuitV2Builder,
     config::{InnerConfig, OuterConfig},
