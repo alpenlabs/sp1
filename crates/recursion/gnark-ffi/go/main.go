@@ -18,21 +18,19 @@ typedef struct {
 */
 import "C"
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"os"
 	"sync"
 	"unsafe"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark/backend/groth16"
-	"github.com/consensys/gnark/constraint"
-	bcs "github.com/consensys/gnark/constraint/bls12-381"
+	"github.com/consensys/gnark/backend/plonk"
 	"github.com/consensys/gnark/frontend"
 	"github.com/consensys/gnark/frontend/cs/r1cs"
+	"github.com/consensys/gnark/frontend/cs/scs"
+	"github.com/consensys/gnark/test/unsafekzg"
 	"github.com/succinctlabs/sp1-recursion-gnark/sp1"
 	"github.com/succinctlabs/sp1-recursion-gnark/sp1/babybear"
 	"github.com/succinctlabs/sp1-recursion-gnark/sp1/poseidon2"
@@ -177,65 +175,6 @@ func TestGroth16Bn254(witnessJson *C.char, constraintsJson *C.char) *C.char {
 	return nil
 }
 
-// Dump writes the coefficient table and the fully‑expanded R1Cs rows into w.
-// Caller decides where w points to (file, buffer, network, …).
-func Dump(cs constraint.ConstraintSystem, w io.Writer) error {
-	// 1. coefficient table
-	coeffs := cs.(*bcs.R1CS).Coefficients
-	if err := binary.Write(w, binary.LittleEndian, uint32(len(coeffs))); err != nil {
-		return err
-	}
-	for _, c := range coeffs {
-		data := c.Marshal() // returns 32‑byte slice, no error
-		if _, err := w.Write(data); err != nil {
-			return err
-		}
-	}
-
-	// 2. full rows
-	rows := cs.(*bcs.R1CS).GetR1Cs() // materialises all constraints
-	if err := binary.Write(w, binary.LittleEndian, uint32(len(rows))); err != nil {
-		return err
-	}
-
-	// helper closure
-	writeLE := func(n uint32) error { return binary.Write(w, binary.LittleEndian, n) }
-
-	for _, r := range rows {
-		if err := writeLE(uint32(len(r.L))); err != nil {
-			return err
-		}
-		if err := writeLE(uint32(len(r.R))); err != nil {
-			return err
-		}
-		if err := writeLE(uint32(len(r.O))); err != nil {
-			return err
-		}
-
-		dumpLE := func(expr constraint.LinearExpression) error {
-			for _, t := range expr {
-				if err := writeLE(uint32(t.WireID())); err != nil {
-					return err
-				}
-				if err := writeLE(uint32(t.CoeffID())); err != nil {
-					return err
-				}
-			}
-			return nil
-		}
-		if err := dumpLE(r.L); err != nil {
-			return err
-		}
-		if err := dumpLE(r.R); err != nil {
-			return err
-		}
-		if err := dumpLE(r.O); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func TestMain() error {
 	// Get the file name from an environment variable.
 	fileName := os.Getenv("WITNESS_JSON")
@@ -258,96 +197,36 @@ func TestMain() error {
 
 	// Compile the circuit.
 	circuit := sp1.NewCircuit(inputs)
-	builder := r1cs.NewBuilder
-	contr, err := frontend.Compile(ecc.BLS12_381.ScalarField(), builder, &circuit)
+	builder := scs.NewBuilder
+	scs, err := frontend.Compile(ecc.BN254.ScalarField(), builder, &circuit)
 	if err != nil {
 		return err
 	}
-	fmt.Println("[sp1] gnark verifier constraints:", contr.GetNbConstraints())
-
-	{
-
-		// benchmark
-		nbCoeff := contr.GetNbCoefficients()
-		bytesCoeffTable := nbCoeff * 32
-		fmt.Printf("Coeff-table: %d elements  ≈  %d bytes\n",
-			nbCoeff, bytesCoeffTable)
-
-		var nTerms int
-
-		r1cs_contr := contr.(*bcs.R1CS)
-		for _, r := range r1cs_contr.GetR1Cs() { // materialises each row once
-			nTerms += len(r.L) + len(r.R) + len(r.O) // three linear-expressions
-		}
-
-		fmt.Printf("Total terms in matrix: %d  (≈ %d bytes)\n",
-			nTerms, nTerms*8) // a Term is 2×uint32 = 8 B
-
-		num_vars := (contr.GetNbSecretVariables() + contr.GetNbPublicVariables() + contr.GetNbInternalVariables())
-		naive := 3 * contr.GetNbConstraints() * num_vars * 32
-
-		fmt.Printf("Naive cost num_vars=(%d) num_constraints=(%d)  (≈ %d bytes)\n", num_vars, contr.GetNbConstraints(), naive) // a Term is 2×uint32 = 8 B
-
-	}
-
-	{
-		r1cs_fn := "/r1cs_to_dvsnark"
-		file, err := os.Create(r1cs_fn) // os.Create returns an *os.File, which implements io.Writer
-		if err != nil {
-			log.Fatalf("Failed to create file: %v", err)
-		}
-		defer file.Close() // Ensure the file is closed when main exits
-
-		Dump(contr, file)
-
-		assignment := sp1.NewCircuit(inputs)
-		witness, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
-		if err != nil {
-			return err
-		}
-		_solution, err := contr.Solve(witness)
-		if err != nil {
-			panic("err is not nil for solve")
-		}
-		solution := _solution.(*bcs.R1CSSolution)
-
-		witness_fn := "/witness_to_dvsnark"
-		wfile, err := os.Create(witness_fn) // os.Create returns an *os.File, which implements io.Writer
-		if err != nil {
-			log.Fatalf("Failed to create file: %v", err)
-		}
-		defer wfile.Close() // Ensure the file is closed when main exits
-
-		bytesWritten, err := solution.W.WriteTo(wfile)
-		if err != nil {
-			log.Fatalf("Failed to write to file: %v", err)
-		}
-
-		fmt.Printf("Successfully wrote %d bytes to %s\n", bytesWritten, witness_fn)
-	}
-
-	//
-	// fmt.Println("Hello")
-	// for _, v := range solution.W {
-	// 	fmt.Println(v.String())
-	// }
+	fmt.Println("[sp1] gnark verifier constraints:", scs.GetNbConstraints())
 
 	// Run the dummy setup.
-	// srs, srsLagrange, err := unsafekzg.NewSRS(contr)
-	// if err != nil {
-	// 	return err
-	// }
-	// var pk plonk.ProvingKey
-	// pk, _, err = plonk.Setup(contr, srs, srsLagrange)
-	// if err != nil {
-	// 	return err
-	// }
+	srs, srsLagrange, err := unsafekzg.NewSRS(scs)
+	if err != nil {
+		return err
+	}
+	var pk plonk.ProvingKey
+	pk, _, err = plonk.Setup(scs, srs, srsLagrange)
+	if err != nil {
+		return err
+	}
 
-	// // Generate the proof.
-	// _, err = plonk.Prove(contr, pk, witness)
-	// if err != nil {
-	// 	return err
-	// }
+	// Generate witness.
+	assignment := sp1.NewCircuit(inputs)
+	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
+	if err != nil {
+		return err
+	}
+
+	// Generate the proof.
+	_, err = plonk.Prove(scs, pk, witness)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -396,7 +275,7 @@ func TestPoseidonBabyBear2() *C.char {
 	assignment := sp1.TestPoseidon2BabyBearCircuit{Input: input, ExpectedOutput: expectedOutput}
 
 	builder := r1cs.NewBuilder
-	r1cs, err := frontend.Compile(ecc.BLS12_381.ScalarField(), builder, &circuit)
+	r1cs, err := frontend.Compile(ecc.BN254.ScalarField(), builder, &circuit)
 	if err != nil {
 		return C.CString(err.Error())
 	}
@@ -408,7 +287,7 @@ func TestPoseidonBabyBear2() *C.char {
 	}
 
 	// Generate witness.
-	witness, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
+	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
 	if err != nil {
 		return C.CString(err.Error())
 	}

@@ -19,9 +19,9 @@ import (
 )
 
 var globalMutex sync.RWMutex
-var globalR1cs constraint.ConstraintSystem = groth16.NewCS(ecc.BLS12_381)
+var globalR1cs constraint.ConstraintSystem = groth16.NewCS(ecc.BN254)
 var globalR1csInitialized = false
-var globalPk groth16.ProvingKey = groth16.NewProvingKey(ecc.BLS12_381)
+var globalPk groth16.ProvingKey = groth16.NewProvingKey(ecc.BN254)
 var globalPkInitialized = false
 
 func ProvePlonk(dataDir string, witnessPath string) Proof {
@@ -36,7 +36,7 @@ func ProvePlonk(dataDir string, witnessPath string) Proof {
 	if err != nil {
 		panic(err)
 	}
-	scs := plonk.NewCS(ecc.BLS12_381)
+	scs := plonk.NewCS(ecc.BN254)
 	scs.ReadFrom(scsFile)
 	defer scsFile.Close()
 
@@ -45,7 +45,7 @@ func ProvePlonk(dataDir string, witnessPath string) Proof {
 	if err != nil {
 		panic(err)
 	}
-	pk := plonk.NewProvingKey(ecc.BLS12_381)
+	pk := plonk.NewProvingKey(ecc.BN254)
 	bufReader := bufio.NewReaderSize(pkFile, 1024*1024)
 	pk.UnsafeReadFrom(bufReader)
 	defer pkFile.Close()
@@ -55,7 +55,7 @@ func ProvePlonk(dataDir string, witnessPath string) Proof {
 	if err != nil {
 		panic(err)
 	}
-	vk := plonk.NewVerifyingKey(ecc.BLS12_381)
+	vk := plonk.NewVerifyingKey(ecc.BN254)
 	vk.ReadFrom(vkFile)
 	defer vkFile.Close()
 
@@ -74,7 +74,7 @@ func ProvePlonk(dataDir string, witnessPath string) Proof {
 
 	// Generate the witness.
 	assignment := NewCircuit(witnessInput)
-	witness, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
+	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
 	if err != nil {
 		panic(err)
 	}
@@ -237,7 +237,7 @@ func ProveGroth16Old(dataDir string, witnessPath string) Proof {
 	start = time.Now()
 	// Generate the witness.
 	assignment := NewCircuit(witnessInput)
-	witness, err := frontend.NewWitness(&assignment, ecc.BLS12_381.ScalarField())
+	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
 	if err != nil {
 		panic(err)
 	}

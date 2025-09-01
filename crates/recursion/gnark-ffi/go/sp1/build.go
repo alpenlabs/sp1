@@ -98,8 +98,8 @@ func BuildPlonk(dataDir string) {
 	}
 
 	// Download the trusted setup.
-	var srs kzg.SRS = kzg.NewSRS(ecc.BLS12_381)
-	var srsLagrange kzg.SRS = kzg.NewSRS(ecc.BLS12_381)
+	var srs kzg.SRS = kzg.NewSRS(ecc.BN254)
+	var srsLagrange kzg.SRS = kzg.NewSRS(ecc.BN254)
 	srsFileName := dataDir + "/" + srsFile
 	srsLagrangeFileName := dataDir + "/" + srsLagrangeFile
 
@@ -180,7 +180,7 @@ func BuildPlonk(dataDir string) {
 
 	// Generate proof.
 	assignment := NewCircuit(witnessInput)
-	witness, err := frontend.NewWitness(&assignment, fr.Modulus())
+	witness, err := frontend.NewWitness(&assignment, ecc.BN254.ScalarField())
 	if err != nil {
 		panic(err)
 	}
@@ -447,105 +447,4 @@ func BuildGroth16(dataDir string) {
 		r1cs_contr := r1cs.(*bcs.R1CS)
 		Dump(r1cs_contr, file)
 	}
-
-	// {
-	// 	assignment := NewCircuit(witnessInput)
-	// 	witness, err := frontend.NewWitness(&assignment, fr.Modulus())
-	// 	if err != nil {
-	// 		panic(err)
-	// 	}
-	// 	_solution, err := r1cs.Solve(witness)
-	// 	if err != nil {
-	// 		panic("err is not nil for solve")
-	// 	}
-	// 	solution := _solution.(*bcs.R1CSSolution)
-
-	// 	witness_fn := "/witness_to_dvsnark"
-	// 	wfile, err := os.Create(witness_fn)
-	// 	if err != nil {
-	// 		log.Fatalf("Failed to create file: %v", err)
-	// 	}
-	// 	defer wfile.Close()
-
-	// 	bytesWritten, err := solution.W.WriteTo(wfile)
-	// 	if err != nil {
-	// 		log.Fatalf("Failed to write to file: %v", err)
-	// 	}
-
-	// 	fmt.Printf("Successfully wrote %d bytes to %s\n", bytesWritten, witness_fn)
-	// }
-
-	// // Generate the proving and verifying key.
-	// pk, vk, err := groth16.Setup(r1cs)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// // Generate proof.
-	// assignment := NewCircuit(witnessInput)
-	// witness, err := frontend.NewWitness(&assignment, fr.Modulus())
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// proof, err := groth16.Prove(r1cs, pk, witness)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// // Verify proof.
-	// publicWitness, err := witness.Public()
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// err = groth16.Verify(proof, vk, publicWitness)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// // Create the build directory.
-	// os.MkdirAll(dataDir, 0755)
-
-	// // Write the solidity verifier.
-	// solidityVerifierFile, err := os.Create(dataDir + "/" + groth16VerifierContractPath)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// vk.ExportSolidity(solidityVerifierFile)
-
-	// // Modify the solidity verifier.
-	// modifyGroth16Verifier(solidityVerifierFile)
-	// defer solidityVerifierFile.Close()
-
-	// // Write the R1CS.
-	// r1csFile, err := os.Create(dataDir + "/" + groth16CircuitPath)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer r1csFile.Close()
-	// _, err = r1cs.WriteTo(r1csFile)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// // Write the verifier key.
-	// vkFile, err := os.Create(dataDir + "/" + groth16VkPath)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer vkFile.Close()
-	// _, err = vk.WriteTo(vkFile)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// // Write the proving key.
-	// pkFile, err := os.Create(dataDir + "/" + groth16PkPath)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer pkFile.Close()
-	// err = pk.WriteDump(pkFile)
-	// if err != nil {
-	// 	panic(err)
-	// }
 }

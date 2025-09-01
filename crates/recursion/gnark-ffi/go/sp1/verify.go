@@ -23,7 +23,7 @@ func VerifyPlonk(verifyCmdDataDir string, verifyCmdProof string, verifyCmdVkeyHa
 	if err != nil {
 		panic(err)
 	}
-	proof := plonk.NewProof(ecc.BLS12_381)
+	proof := plonk.NewProof(ecc.BN254)
 	if _, err := proof.ReadFrom(bytes.NewReader(proofDecodedBytes)); err != nil {
 		panic(err)
 	}
@@ -33,7 +33,7 @@ func VerifyPlonk(verifyCmdDataDir string, verifyCmdProof string, verifyCmdVkeyHa
 	if err != nil {
 		panic(err)
 	}
-	vk := plonk.NewVerifyingKey(ecc.BLS12_381)
+	vk := plonk.NewVerifyingKey(ecc.BN254)
 	vk.ReadFrom(vkFile)
 
 	// Compute the public witness.
@@ -44,7 +44,7 @@ func VerifyPlonk(verifyCmdDataDir string, verifyCmdProof string, verifyCmdVkeyHa
 		VkeyHash:              verifyCmdVkeyHash,
 		CommittedValuesDigest: verifyCmdCommittedValuesDigest,
 	}
-	witness, err := frontend.NewWitness(&circuit, ecc.BLS12_381.ScalarField())
+	witness, err := frontend.NewWitness(&circuit, ecc.BN254.ScalarField())
 	if err != nil {
 		panic(err)
 	}
@@ -69,7 +69,7 @@ func VerifyGroth16(verifyCmdDataDir string, verifyCmdProof string, verifyCmdVkey
 	if err != nil {
 		panic(err)
 	}
-	proof := groth16.NewProof(ecc.BLS12_381)
+	proof := groth16.NewProof(ecc.BN254)
 	if _, err := proof.ReadFrom(bytes.NewReader(proofDecodedBytes)); err != nil {
 		panic(err)
 	}
@@ -79,7 +79,7 @@ func VerifyGroth16(verifyCmdDataDir string, verifyCmdProof string, verifyCmdVkey
 	if err != nil {
 		panic(err)
 	}
-	vk := groth16.NewVerifyingKey(ecc.BLS12_381)
+	vk := groth16.NewVerifyingKey(ecc.BN254)
 	vk.ReadFrom(vkFile)
 
 	// Compute the public witness.
@@ -90,7 +90,7 @@ func VerifyGroth16(verifyCmdDataDir string, verifyCmdProof string, verifyCmdVkey
 		VkeyHash:              verifyCmdVkeyHash,
 		CommittedValuesDigest: verifyCmdCommittedValuesDigest,
 	}
-	witness, err := frontend.NewWitness(&circuit, ecc.BLS12_381.ScalarField())
+	witness, err := frontend.NewWitness(&circuit, ecc.BN254.ScalarField())
 	if err != nil {
 		panic(err)
 	}
