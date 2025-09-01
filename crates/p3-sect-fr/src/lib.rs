@@ -39,12 +39,6 @@ impl SectFr {
     pub(crate) const fn new(value: FFSectFr) -> Self {
         Self { value }
     }
-
-    pub fn to_biguint(value: FFSectFr) -> BigUint {
-        let repr = value.to_repr();
-        let le_bytes = repr.as_ref();
-        BigUint::from_bytes_le(le_bytes)
-    }
 }
 
 impl Serialize for SectFr {
@@ -284,7 +278,6 @@ impl Distribution<SectFr> for Standard {
 
 use ark_ff::fields::{Fp256, MontBackend, MontConfig};
 use std::convert::TryInto;
-
 #[derive(MontConfig)]
 #[modulus = "3450873173395281893717377931138512760570940988862252126328087024741343"]
 #[generator = "3"]

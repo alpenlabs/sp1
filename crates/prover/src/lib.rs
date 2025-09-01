@@ -1065,7 +1065,7 @@ impl<C: SP1ProverComponents> SP1Prover<C> {
         println!("vkey_hash {:?}", vkey_hash);
         println!("committed_values_digest {:?}", committed_values_digest);
         let prover = SectWitnessGenerator {};
-        let proof = prover.prove(witness, build_dir.to_path_buf());
+        prover.prove(witness, build_dir.to_path_buf())
 
         // Verify the proof.
         // prover.verify(
@@ -1074,8 +1074,6 @@ impl<C: SP1ProverComponents> SP1Prover<C> {
         //     &committed_values_digest.as_canonical_biguint(),
         //     build_dir,
         // );
-
-        proof
     }
 
     pub fn recursion_program(
@@ -1604,11 +1602,11 @@ pub mod tests {
         let bytes = bincode::serialize(&wrapped_bn254_proof).unwrap();
 
         // Save the proof.
-        let mut file = File::create("proof-with-pis-wrap.bin").unwrap();
+        let mut file = File::create("proof-with-pis.bin").unwrap();
         file.write_all(bytes.as_slice()).unwrap();
 
         // Load the proof.
-        let mut file = File::open("proof-with-pis-wrap.bin").unwrap();
+        let mut file = File::open("proof-with-pis.bin").unwrap();
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes).unwrap();
 

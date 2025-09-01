@@ -30,6 +30,7 @@ fn assert_docker() {
     }
 }
 
+#[allow(dead_code)]
 fn get_docker_image() -> String {
     std::env::var("SP1_GNARK_IMAGE")
         .unwrap_or_else(|_| format!("ghcr.io/succinctlabs/sp1-gnark:{}", SP1_CIRCUIT_VERSION))
@@ -74,7 +75,7 @@ fn call_docker(args: &[&str], mounts: &[(&str, &str)]) -> Result<()> {
         "/witness_to_dvsnark"
     ));
 
-    cmd.arg("sp1-gnark:latest"); // replace with modified image sp1-gnark:latest
+    cmd.arg("sp1-gnark:latest");
     cmd.args(args);
     tracing::info!("Command {:?}", cmd);
     let result = cmd.output()?;

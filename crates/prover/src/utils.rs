@@ -123,27 +123,28 @@ pub fn words_to_bytes<T: Copy>(words: &[Word<T>]) -> Vec<T> {
     words.iter().flat_map(|word| word.0).collect()
 }
 
-/// Convert 8 BabyBear words into a SectFr field element by shifting by 31 bits each time. The last
-/// word becomes the least significant bits.
+/// Convert 8 BabyBear words into a SectFr field element.
+/// First 32 bits are fully masked, this leaves 256-32=224 bits
+/// which is now small enough to fit within the scalar field.
+/// The last word becomes the least significant bits.
+/// Note: the function name bn254 here is a misnomer and actually refers sect233k1 curve.
+/// Is kept here to reduce extensive code changes.
 pub fn babybears_to_bn254(digest: &[BabyBear; 8]) -> SectFr {
     let mut result = SectFr::zero();
     for (idx, word) in digest.iter().enumerate() {
-        // Since BabyBear prime is less than 2^31, we can shift by 28 bits each time and still be
-        // within the SectFr field, we truncate the top 3 bits everytime.
-        // so total size of result in the end is 8 x 28 = 224 bits
-        result *= SectFr::from_canonical_u64(1 << 32); // shift by 28
-        let masked_val_u32 = if idx == 0 {
-            0 // mask top 3-bits
-        } else {
-            word.as_canonical_u32()
-        };
-        result += SectFr::from_canonical_u32(masked_val_u32); // add 28 bits
+        result *= SectFr::from_canonical_u64(1 << 32);
+        let masked_val_u32 = if idx == 0 { 0 } else { word.as_canonical_u32() };
+        result += SectFr::from_canonical_u32(masked_val_u32);
     }
     result
 }
 
-/// Convert 32 BabyBear bytes into a SectFr field element. The first byte's most significant 3 bits
-/// (which would become the 3 most significant bits) are truncated.
+/// Convert 32 BabyBear bytes into a SectFr field element.
+/// First 4 bytes (32 bits) is fully masked, this leaves 256-32=224 bits.
+/// which is now small enough to fit within the scalar field.
+/// The last word becomes the least significant bits.
+/// Note: the function name bn254 here is a misnomer and actually refers sect233k1 curve.
+/// Is kept here to reduce extensive code changes.
 pub fn babybear_bytes_to_bn254(bytes: &[BabyBear; 32]) -> SectFr {
     let mut result = SectFr::zero();
     for (idx, byte) in bytes.iter().enumerate() {

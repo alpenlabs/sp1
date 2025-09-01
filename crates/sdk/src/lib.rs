@@ -176,8 +176,8 @@ mod tests {
         st.write_slice(&compressed_proof_bytes);
         let client = ProverClient::builder().cpu().build();
         let elf = test_artifacts::FIBONACCI_BLAKE3_ELF;
-        let (pk, vk) = client.setup(elf);
-        let proof = client.prove(&pk, &st).groth16_with_compressed().run().unwrap();
+        let (pk, _) = client.setup(elf);
+        let _ = client.prove(&pk, &st).groth16_with_compressed().run().unwrap();
 
         //client.verify(&proof, &vk).unwrap();
 
