@@ -253,6 +253,12 @@ func BuildPlonk(dataDir string) {
 // It is functionally identical to the original version but batches I/O
 // through an internal bufio.Writer and uses raw little-endian encodes for
 // scalars to avoid reflection overhead in binary.Write.
+//
+// We do not use WriteTo function to dump r1cs here because it writes
+// more than what is needed to be exported to dvsnark
+// this extraneous stuff includes gnark exclusive parameters and values,
+// which can be excluded, instead we export only the R1CS matrix
+// by this function.
 func Dump(r1cs *bcs.R1CS, w io.Writer) error {
 	// Wrap the destination with a large buffered writer (1 MiB; tune as needed).
 	bw := bufio.NewWriterSize(w, 1<<20)
@@ -322,6 +328,7 @@ func Dump(r1cs *bcs.R1CS, w io.Writer) error {
 	return bw.Flush() // explicit flush + propagate any error
 }
 
+// If `r1cs_cached` exists, convert it to `r1cs_to_dvsnark`; otherwise return false.
 func DumpR1CSIfItExists() bool {
 	// Check input exists
 	if stat, err := os.Stat("/r1cs_cached"); err != nil {
@@ -361,6 +368,12 @@ func DumpR1CSIfItExists() bool {
 	return true
 }
 
+// This function builds r1cs constraints of stark verifier to be used by dv-pari.
+// It dumps the same constraints in different format in two files `r1cs_cached` and `r1cs_to_dvsnark`.
+// `r1cs_cached`: R1CS in gnark's native format, optimized with extra tricks to reduce memory.
+// `r1cs_to_dvsnark`: Same R1CS, but stripped of gnark-specific parameters and stored with a simpler sparse matrix representation.
+//
+// We opt for a simpler representation for R1CS here because we need to write an equivalent file reader in rust over the dv-pari side.
 func BuildGroth16(dataDir string) {
 	r1cs_dumped := DumpR1CSIfItExists()
 	if r1cs_dumped {
@@ -368,10 +381,6 @@ func BuildGroth16(dataDir string) {
 		return
 	}
 
-	// Set the environment variable for the constraints file.
-	//
-	// TODO: There might be some non-determinism if a single process is running this command
-	// multiple times.
 	os.Setenv("CONSTRAINTS_JSON", dataDir+"/"+constraintsJsonFile)
 	os.Setenv("GROTH16", "1")
 

@@ -1,3 +1,16 @@
+//! Poseidon params are referenced from bn254 poseidon parameters below:
+//! https://github.com/HorizenLabs/poseidon2/blob/main/plain_implementations/src/poseidon2/poseidon2_instance_bn256.rs
+//!
+//! Round constants given below are exactly the ones provided for bn254 above, except that these
+//! values are truncated to fit the field size. `Poseidon2Params` like state-width, round sizes,
+//! s-box size are the same between bn254 and sect233k1.
+//!
+//! we should generate round constants through the procedure noted in Poseidon paper,
+//! which suggests hashing the above poseidon parameters + scalar field to generate these constants.
+//! The values generated this way are deterministic and transparent
+//! but truncation adds bias and as such does not preserve uniformity.
+//! TODO: @manishbista28, @AaronFeickert
+
 use std::sync::Arc;
 
 use crate::FpSECT;
@@ -350,6 +363,7 @@ lazy_static! {
             from_hex("0x0fc1bbceba0590f5abbdffa6d3b35e3297c021a3a409926d0e2d54dc1c"),
         ],
     ];
+    // as mentioned above, params are same in value as for bn254 (except RC3 is truncated to fit scalar field size)
     pub static ref POSEIDON2_SECT_PARAMS: Arc<Poseidon2Params<Scalar>> =
         Arc::new(Poseidon2Params::new(3, 5, 8, 56, &MAT_DIAG3_M_1, &MAT_INTERNAL3, &RC3));
 }

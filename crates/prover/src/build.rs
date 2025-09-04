@@ -46,15 +46,15 @@ pub fn try_build_groth16_bn254_artifacts_dev(
 
     let home = std::env::home_dir().expect("Failed to find the home directory.");
     let circuits_dir = home.join(".sp1/circuits");
-    let r1cs_to_dvsnark_path = circuits_dir.join("r1cs_to_dvsnark");
-    let r1cs_cached_path = circuits_dir.join("r1cs_cached");
+    let r1cs_to_dvsnark_path = circuits_dir.join("r1cs_to_dvsnark"); // r1cs dump in gnark format
+    let r1cs_cached_path = circuits_dir.join("r1cs_cached"); // r1cs dump to export over to dvsnark
 
     let mut r1cs_to_dvsnark_content_exist = false;
     if r1cs_to_dvsnark_path.exists() {
         let md = metadata(r1cs_to_dvsnark_path).unwrap();
         let filesize = md.len();
+        // ensure it is not empty, arbitrary threshold 1024, could have been set to 0
         if filesize > 1024 {
-            // > 1 KB
             r1cs_to_dvsnark_content_exist = true
         }
     }
@@ -63,8 +63,8 @@ pub fn try_build_groth16_bn254_artifacts_dev(
     if r1cs_cached_path.exists() {
         let md = metadata(r1cs_cached_path).unwrap();
         let filesize = md.len();
+        // ensure it is not empty
         if filesize > 1024 {
-            // > 1 KB
             r1cs_cached_content_exist = true
         }
     }

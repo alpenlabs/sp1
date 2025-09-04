@@ -84,6 +84,14 @@ impl CpuProver {
     /// let (pk, vk) = client.setup(elf);
     /// let builder = client.prove(&pk, &stdin).core().run();
     /// ```
+    /// # Fields
+    ///     - `init_with_compressed`: if true, stdin should include compressed proof, else raw
+    ///       pulbic inputs as it was previously
+    /// The purpose of `init_with_compressed` is to make it possible to have the heavy part of the
+    /// proving, which includes core and compressed proof generation, be done in SP1 cluster,
+    /// while the cheaper part, which is generating SNARK, be done locally. This is necessary in
+    /// our use case because our fork only makes change to the `OuterProof` (wrapping SNARK) and
+    /// not the Inner Proof.
     pub fn prove<'a>(&'a self, pk: &'a SP1ProvingKey, stdin: &SP1Stdin) -> CpuProveBuilder<'a> {
         CpuProveBuilder {
             prover: self,
@@ -98,11 +106,8 @@ impl CpuProver {
         }
     }
 
-    /// input_is_compressed_proof is set to true when the user has passed compressed proof directly
-    /// as input. this is the case when you offload compress proof generation to sp1 cluster but
-    /// run the wrapping part locally. You can not offload wrapping part to sp1 cluster because this
-    /// sp1 fork works over sect233k1 to dvsnark instead of bn254 over groth
-    #[allow(clippy::print_stdout)]
+    /// `input_is_compressed_proof` is set to true when the user has passed compressed proof
+    /// directly as input.
     pub(crate) fn prove_impl<'a>(
         &'a self,
         pk: &SP1ProvingKey,
@@ -112,7 +117,8 @@ impl CpuProver {
         mode: SP1ProofMode,
         input_is_compressed_proof: bool,
     ) -> Result<SP1ProofWithPublicValues> {
-        println!("input_is_compressed_proof {input_is_compressed_proof}");
+        tracing::info!("input_is_compressed_proof {input_is_compressed_proof}");
+        // If true, read compressed proof from stdin
         let (reduce_proof, public_values) = if input_is_compressed_proof {
             let compressed_proof_bytes = &stdin.buffer;
             assert_eq!(compressed_proof_bytes.len(), 1);
@@ -123,6 +129,7 @@ impl CpuProver {
             // so you can return empty
             (reduce_proof, SP1PublicValues::default())
         } else {
+            // If false, compute compressed proof
             let program = self.prover.get_program(&pk.elf).unwrap();
 
             // If we're in mock mode, return a mock proof.
@@ -133,7 +140,7 @@ impl CpuProver {
             // Generate the core proof.
             let proof: SP1ProofWithMetadata<SP1CoreProofData> =
                 self.prover.prove_core(&pk.pk, program, stdin, opts, context)?;
-            println!("public values {:?}", proof.public_values);
+            tracing::info!("public values {:?}", proof.public_values);
             if mode == SP1ProofMode::Core {
                 return Ok(SP1ProofWithPublicValues::new(
                     SP1Proof::Core(proof.proof.0),
@@ -165,19 +172,6 @@ impl CpuProver {
         // Generate the wrap proof.
         let outer_proof = self.prover.wrap_bn254(compress_proof, opts)?;
 
-        // let bytes = bincode::serialize(&outer_proof).unwrap();
-
-        // // Save the proof.
-        // let mut file = File::create("proof-with-pis-sect-wrap.bin").unwrap();
-        // file.write_all(bytes.as_slice()).unwrap();
-
-        // let mut file = std::fs::File::open("proof-with-pis-sect-wrap.bin").unwrap();
-        // let mut bytes = Vec::new();
-        // file.read_to_end(&mut bytes).unwrap();
-
-        // let outer_proof: SP1ReduceProof<OuterSC> = bincode::deserialize(&bytes).unwrap();
-        // let _ = self.prover.wrap_vk.set(outer_proof.clone().vk);
-
         // Generate the gnark proof.
         match mode {
             SP1ProofMode::Groth16 => {
@@ -190,7 +184,8 @@ impl CpuProver {
                 let _sect_witness = self.prover.wrap_sect(outer_proof, &groth16_bn254_artifacts);
                 Ok(SP1ProofWithPublicValues::new(
                     SP1Proof::Core(vec![]),
-                    public_values,
+                    public_values, /* return raw public values as it will be needed to verify
+                                    * public input again r1cs witness */
                     self.version().to_string(),
                 ))
             }

@@ -17,7 +17,8 @@ func init() {
 	init_rc16()
 }
 
-// Poseidon2 round constants for a state consisting of three BN254 field elements.
+// Poseidon2 round constants for Sect233k1 field elements.
+// copied from `crates::p3-sect-fr::params::RC3`
 var rc3 [numExternalRounds + numInternalRounds][width]frontend.Variable = [64][3]frontend.Variable{
 	{
 		frontend.Variable("0x1d066a255517b7fd8bddd3a93f7804ef7f8fcde48bb4c37a59a09a1a97"),

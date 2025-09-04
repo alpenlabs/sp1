@@ -571,7 +571,6 @@ impl From<RiscvAirDiscriminants> for RiscvAirId {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-#[allow(clippy::print_stdout)]
 pub mod tests {
 
     use crate::{
@@ -612,7 +611,7 @@ pub mod tests {
     #[ignore]
     fn write_core_air_costs() {
         let costs = RiscvAir::<BabyBear>::costs();
-        println!("{:?}", costs);
+        tracing::info!("{:?}", costs);
         // write to file
         // Create directory if it doesn't exist
         let dir = std::path::Path::new("../executor/src/artifacts");

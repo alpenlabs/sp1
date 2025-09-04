@@ -86,7 +86,8 @@ impl Groth16Bn254Prover {
         build_groth16_bn254(build_dir.to_str().unwrap());
 
         // Build the contracts.
-        // Self::build_contracts(build_dir);
+        // Self::build_contracts(build_dir); // commented because we can't build solidity contracts
+        // for sect233k1 dv-pari system
     }
 
     /// Generates a Groth16 proof given a witness.

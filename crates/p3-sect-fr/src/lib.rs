@@ -1,6 +1,7 @@
-//! The scalar field of the SECT curve, defined as `F_r` where `r =
-//! 3450873173395281893717377931138512760570940988862252126328087024741343`.
-
+/// This library references p3-bn254-fr 0.2.2-succinct
+/// https://docs.rs/crate/p3-bn254-fr/0.2.3-succinct/source/src/lib.rs
+///
+/// Changes in this file is reserved to sect233k1 parameters like field modulus
 pub mod params;
 mod poseidon2;
 

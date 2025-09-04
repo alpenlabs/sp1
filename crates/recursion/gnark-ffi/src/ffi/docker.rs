@@ -51,9 +51,9 @@ fn call_docker(args: &[&str], mounts: &[(&str, &str)]) -> Result<()> {
 
     let home = std::env::home_dir().expect("Failed to find the home directory.");
     let circuits_dir = home.join(".sp1/circuits");
-    let r1cs_to_dvsnark_path = circuits_dir.join("r1cs_to_dvsnark");
-    let r1cs_cached_path = circuits_dir.join("r1cs_cached");
-    let witness_to_dvsnark_path = circuits_dir.join("witness_to_dvsnark");
+    let r1cs_to_dvsnark_path = circuits_dir.join("r1cs_to_dvsnark"); // r1cs dump export to dv-pari
+    let r1cs_cached_path = circuits_dir.join("r1cs_cached"); // r1cs dump gnark format
+    let witness_to_dvsnark_path = circuits_dir.join("witness_to_dvsnark"); // witness dump export to dv-pari
 
     let paths_to_create = [&r1cs_to_dvsnark_path, &r1cs_cached_path, &witness_to_dvsnark_path];
 
@@ -75,7 +75,7 @@ fn call_docker(args: &[&str], mounts: &[(&str, &str)]) -> Result<()> {
         "/witness_to_dvsnark"
     ));
 
-    cmd.arg("sp1-gnark:latest");
+    cmd.arg("sp1-gnark:latest"); // custom sp1-gnark docker image to dump r1cs and witness required by dv-pari
     cmd.args(args);
     tracing::info!("Command {:?}", cmd);
     let result = cmd.output()?;

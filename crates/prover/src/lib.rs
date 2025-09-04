@@ -1046,8 +1046,9 @@ impl<C: SP1ProverComponents> SP1Prover<C> {
         proof
     }
 
-    #[allow(clippy::print_stdout)]
     /// Wrap the STARK proven over sect
+    /// Takes STARK proof and dumps witness satisfying the R1CS representing stark verifier in
+    /// file `~/.sp1/circuits/r1cs_to_dvsnark`
     #[instrument(name = "wrap_sect", level = "info", skip_all)]
     pub fn wrap_sect(&self, proof: SP1ReduceProof<OuterSC>, build_dir: &Path) -> SectWitness {
         let input = SP1CompressWitnessValues {
@@ -1062,11 +1063,12 @@ impl<C: SP1ProverComponents> SP1Prover<C> {
         witness.write_committed_values_digest(committed_values_digest);
         witness.write_vkey_hash(vkey_hash);
 
-        println!("vkey_hash {:?}", vkey_hash);
-        println!("committed_values_digest {:?}", committed_values_digest);
+        tracing::info!("vkey_hash {:?}", vkey_hash);
+        tracing::info!("committed_values_digest {:?}", committed_values_digest);
         let prover = SectWitnessGenerator {};
         prover.prove(witness, build_dir.to_path_buf())
 
+        // omit verifying as we haven't generated proof
         // Verify the proof.
         // prover.verify(
         //     &proof,

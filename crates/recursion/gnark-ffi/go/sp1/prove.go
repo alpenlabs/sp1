@@ -98,6 +98,7 @@ func ProvePlonk(dataDir string, witnessPath string) Proof {
 	return NewSP1PlonkBn254Proof(&proof, witnessInput)
 }
 
+// Generates full witness vector using stark proof present in witnessPath
 func SaveWitnessToFile(witnessPath string) {
 
 	r1cs_fn := "/r1cs_cached"
@@ -159,6 +160,11 @@ func SaveWitnessToFile(witnessPath string) {
 
 }
 
+// Generate and Write Witness, that satisfies R1CS, to the file `witness_to_dvsnark`.
+// `witnessPath` includes public and private values (which includes stark proof).
+// but it doesn't include the full witness vector.
+// The purpose of this function is to generate witness in full using the R1CS matrix.
+// As such this function expects `r1cs_cached`, where R1CS matrix was previously dumped
 func ProveGroth16(dataDir string, witnessPath string) Proof {
 
 	fmt.Println("start SaveWitnessToFile")
@@ -174,6 +180,7 @@ func ProveGroth16(dataDir string, witnessPath string) Proof {
 	}
 }
 
+// Previous implementation of ProveGroth16, only name changed
 func ProveGroth16Old(dataDir string, witnessPath string) Proof {
 	// Sanity check the required arguments have been provided.
 	if dataDir == "" {

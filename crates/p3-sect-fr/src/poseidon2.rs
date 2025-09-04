@@ -1,6 +1,6 @@
 //! Diffusion matrix for SECT
 //!
-//! Reference: https://github.com/HorizenLabs/poseidon2/blob/main/plain_implementations/src/poseidon2/poseidon2_instance_sect.rs
+//! Reference: https://github.com/HorizenLabs/poseidon2/blob/main/plain_implementations/src/poseidon2/poseidon2_instance_bn256.rs
 
 use std::sync::OnceLock;
 
@@ -63,6 +63,7 @@ mod tests {
         }
     }
 
+    /// external_round_constants and internal_round_constants are the generated values used in RC3
     #[test]
     fn test_poseidon2_sect() {
         const WIDTH: usize = 3;
