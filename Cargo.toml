@@ -32,6 +32,7 @@ members = [
   "crates/stark",
   "crates/zkvm/*",
   "crates/test-artifacts",
+  "crates/p3-sect-fr",
 ]
 exclude = ["examples/target"]
 resolver = "2"
@@ -69,6 +70,7 @@ sp1-cuda = { path = "crates/cuda", version = "5.2.1" }
 sp1-stark = { path = "crates/stark", version = "5.2.1" }
 sp1-lib = { path = "crates/zkvm/lib", version = "5.2.1", default-features = false }
 sp1-zkvm = { path = "crates/zkvm/entrypoint", version = "5.2.1", default-features = false }
+p3-sect-fr = { path = "crates/p3-sect-fr" }
 
 # For testing.
 test-artifacts = { path = "crates/test-artifacts" }
@@ -77,7 +79,6 @@ test-artifacts = { path = "crates/test-artifacts" }
 p3-field = { version = "=0.2.3-succinct" }
 p3-air = { version = "=0.2.3-succinct" }
 p3-baby-bear = { version = "=0.2.3-succinct" }
-p3-bn254-fr = { version = "=0.2.3-succinct" }
 p3-poseidon2 = { version = "=0.2.3-succinct" }
 p3-symmetric = { version = "=0.2.3-succinct" }
 p3-dft = { version = "=0.2.3-succinct" }

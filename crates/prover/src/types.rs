@@ -3,9 +3,9 @@ use std::{fs::File, path::Path};
 use anyhow::Result;
 use clap::ValueEnum;
 use p3_baby_bear::BabyBear;
-use p3_bn254_fr::Bn254Fr;
 use p3_commit::{Pcs, TwoAdicMultiplicativeCoset};
 use p3_field::{AbstractField, PrimeField, PrimeField32, TwoAdicField};
+use p3_sect_fr::SectFr;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use sp1_core_machine::{io::SP1Stdin, reduce::SP1ReduceProof};
 use sp1_primitives::{io::SP1PublicValues, poseidon2_hash};
@@ -47,8 +47,8 @@ pub trait HashableKey {
     /// Hash the key into a digest of u32 elements.
     fn hash_u32(&self) -> [u32; DIGEST_SIZE];
 
-    /// Hash the key into a Bn254Fr element.
-    fn hash_bn254(&self) -> Bn254Fr {
+    /// Hash the key into a SectFr element.
+    fn hash_bn254(&self) -> SectFr {
         babybears_to_bn254(&self.hash_babybear())
     }
 

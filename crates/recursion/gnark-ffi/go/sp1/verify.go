@@ -38,10 +38,10 @@ func VerifyPlonk(verifyCmdDataDir string, verifyCmdProof string, verifyCmdVkeyHa
 
 	// Compute the public witness.
 	circuit := Circuit{
-		Vars:                 []frontend.Variable{},
-		Felts:                []babybear.Variable{},
-		Exts:                 []babybear.ExtensionVariable{},
-		VkeyHash:             verifyCmdVkeyHash,
+		Vars:                  []frontend.Variable{},
+		Felts:                 []babybear.Variable{},
+		Exts:                  []babybear.ExtensionVariable{},
+		VkeyHash:              verifyCmdVkeyHash,
 		CommittedValuesDigest: verifyCmdCommittedValuesDigest,
 	}
 	witness, err := frontend.NewWitness(&circuit, ecc.BN254.ScalarField())
@@ -84,10 +84,10 @@ func VerifyGroth16(verifyCmdDataDir string, verifyCmdProof string, verifyCmdVkey
 
 	// Compute the public witness.
 	circuit := Circuit{
-		Vars:                 []frontend.Variable{},
-		Felts:                []babybear.Variable{},
-		Exts:                 []babybear.ExtensionVariable{},
-		VkeyHash:             verifyCmdVkeyHash,
+		Vars:                  []frontend.Variable{},
+		Felts:                 []babybear.Variable{},
+		Exts:                  []babybear.ExtensionVariable{},
+		VkeyHash:              verifyCmdVkeyHash,
 		CommittedValuesDigest: verifyCmdCommittedValuesDigest,
 	}
 	witness, err := frontend.NewWitness(&circuit, ecc.BN254.ScalarField())

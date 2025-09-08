@@ -24,6 +24,7 @@ pub struct CpuProveBuilder<'a> {
     pub(crate) core_opts: SP1CoreOpts,
     pub(crate) recursion_opts: SP1CoreOpts,
     pub(crate) mock: bool,
+    pub(crate) init_with_compressed: bool,
 }
 
 impl<'a> CpuProveBuilder<'a> {
@@ -119,6 +120,14 @@ impl<'a> CpuProveBuilder<'a> {
     #[must_use]
     pub fn groth16(mut self) -> Self {
         self.mode = SP1ProofMode::Groth16;
+        self
+    }
+
+    /// groth16 given compressed proof as input
+    #[must_use]
+    pub fn groth16_with_compressed(mut self) -> Self {
+        self.mode = SP1ProofMode::Groth16;
+        self.init_with_compressed = true;
         self
     }
 
@@ -303,8 +312,17 @@ impl<'a> CpuProveBuilder<'a> {
     /// ```
     pub fn run(self) -> Result<SP1ProofWithPublicValues> {
         // Get the arguments.
-        let Self { prover, mode, pk, stdin, mut context_builder, core_opts, recursion_opts, mock } =
-            self;
+        let Self {
+            prover,
+            mode,
+            pk,
+            stdin,
+            mut context_builder,
+            core_opts,
+            recursion_opts,
+            mock,
+            init_with_compressed,
+        } = self;
         let opts = SP1ProverOpts { core_opts, recursion_opts };
         let context = context_builder.build();
 
@@ -315,7 +333,7 @@ impl<'a> CpuProveBuilder<'a> {
         if mock {
             prover.mock_prove_impl(pk, &stdin, context, mode)
         } else {
-            prover.prove_impl(pk, &stdin, opts, context, mode)
+            prover.prove_impl(pk, &stdin, opts, context, mode, init_with_compressed)
         }
     }
 }

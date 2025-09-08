@@ -435,9 +435,9 @@ pub(crate) mod tests {
         utils::tests::run_test_recursion,
     };
     use p3_baby_bear::BabyBear;
-    use p3_bn254_fr::Bn254Fr;
     use p3_challenger::{CanObserve, CanSample, CanSampleBits, FieldChallenger};
     use p3_field::AbstractField;
+    use p3_sect_fr::SectFr;
     use p3_symmetric::{CryptographicHasher, Hash, PseudoCompressionFunction};
     use sp1_recursion_compiler::{
         circuit::{AsmBuilder, AsmConfig},
@@ -446,7 +446,7 @@ pub(crate) mod tests {
         ir::{Builder, Config, Ext, ExtConst, Felt, Var},
     };
     use sp1_recursion_core::stark::{outer_perm, BabyBearPoseidon2Outer, OuterCompress, OuterHash};
-    use sp1_recursion_gnark_ffi::PlonkBn254Prover;
+    use sp1_recursion_gnark_ffi::{Groth16Bn254Prover, PlonkBn254Prover};
     use sp1_stark::{baby_bear_poseidon2::BabyBearPoseidon2, StarkGenericConfig};
 
     use crate::{
@@ -615,7 +615,7 @@ pub(crate) mod tests {
 
         let mut backend = ConstraintCompiler::<C>::default();
         let constraints = backend.emit(builder.into_operations());
-        PlonkBn254Prover::test::<C>(constraints.clone(), OuterWitness::default());
+        Groth16Bn254Prover::test::<C>(constraints.clone(), OuterWitness::default());
     }
 
     #[test]
@@ -624,8 +624,8 @@ pub(crate) mod tests {
         let perm = outer_perm();
         let compressor = OuterCompress::new(perm.clone());
 
-        let a: [Bn254Fr; 1] = [Bn254Fr::two()];
-        let b: [Bn254Fr; 1] = [Bn254Fr::two()];
+        let a: [SectFr; 1] = [SectFr::two()];
+        let b: [SectFr; 1] = [SectFr::two()];
         let gt = compressor.compress([a, b]);
 
         let mut builder = Builder::<C>::default();

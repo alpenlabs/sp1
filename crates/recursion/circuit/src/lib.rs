@@ -6,9 +6,9 @@ use challenger::{
 };
 use hash::{FieldHasherVariable, Posedion2BabyBearHasherVariable};
 use itertools::izip;
-use p3_bn254_fr::Bn254Fr;
 use p3_field::AbstractField;
 use p3_matrix::dense::RowMajorMatrix;
+use p3_sect_fr::SectFr;
 use sp1_recursion_compiler::{
     circuit::CircuitV2Builder,
     config::{InnerConfig, OuterConfig},
@@ -627,7 +627,7 @@ impl<C: CircuitConfig<F = BabyBear, Bit = Felt<BabyBear>>> BabyBearFriConfigVari
     }
 }
 
-impl<C: CircuitConfig<F = BabyBear, N = Bn254Fr, Bit = Var<Bn254Fr>>> BabyBearFriConfigVariable<C>
+impl<C: CircuitConfig<F = BabyBear, N = SectFr, Bit = Var<SectFr>>> BabyBearFriConfigVariable<C>
     for BabyBearPoseidon2Outer
 {
     type FriChallengerVariable = MultiField32ChallengerVariable<C>;

@@ -1,6 +1,6 @@
 #![allow(clippy::print_stdout)] // okay to print to stdout: this is a build script
 
-use std::{borrow::Borrow, path::PathBuf};
+use std::{borrow::Borrow, fs::metadata, path::PathBuf};
 
 use p3_baby_bear::BabyBear;
 use sp1_core_executor::SP1Context;
@@ -43,6 +43,37 @@ pub fn try_build_groth16_bn254_artifacts_dev(
     template_proof: &ShardProof<OuterSC>,
 ) -> PathBuf {
     let build_dir = groth16_bn254_artifacts_dev_dir();
+
+    let home = std::env::home_dir().expect("Failed to find the home directory.");
+    let circuits_dir = home.join(".sp1/circuits");
+    let r1cs_to_dvsnark_path = circuits_dir.join("r1cs_to_dvsnark"); // r1cs dump in gnark format
+    let r1cs_cached_path = circuits_dir.join("r1cs_cached"); // r1cs dump to export over to dvsnark
+
+    let mut r1cs_to_dvsnark_content_exist = false;
+    if r1cs_to_dvsnark_path.exists() {
+        let md = metadata(r1cs_to_dvsnark_path).unwrap();
+        let filesize = md.len();
+        // ensure it is not empty, arbitrary threshold 1024, could have been set to 0
+        if filesize > 1024 {
+            r1cs_to_dvsnark_content_exist = true
+        }
+    }
+
+    let mut r1cs_cached_content_exist = false;
+    if r1cs_cached_path.exists() {
+        let md = metadata(r1cs_cached_path).unwrap();
+        let filesize = md.len();
+        // ensure it is not empty
+        if filesize > 1024 {
+            r1cs_cached_content_exist = true
+        }
+    }
+
+    if r1cs_cached_content_exist && r1cs_to_dvsnark_content_exist {
+        println!("[sp1] build dir contains cached r1cs");
+        return build_dir; // early return if content already exist
+    }
+
     println!("[sp1] building groth16 bn254 artifacts in development mode");
     build_groth16_bn254_artifacts(template_vk, template_proof, &build_dir);
     build_dir
@@ -137,6 +168,8 @@ pub fn build_constraints_and_witness(
         words_to_bytes(&pv.committed_value_digest).try_into().unwrap();
     let committed_values_digest = babybear_bytes_to_bn254(&committed_values_digest_bytes);
 
+    println!("SP1 VERIIFCATION KEY: {:?}", vkey_hash);
+    tracing::warn!("committed values digest {:?}", committed_values_digest);
     tracing::info!("building template witness");
     let mut witness = OuterWitness::default();
     template_input.write(&mut witness);

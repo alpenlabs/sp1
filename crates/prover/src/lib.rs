@@ -80,7 +80,10 @@ use sp1_recursion_core::{
     RecursionProgram, Runtime as RecursionRuntime,
 };
 pub use sp1_recursion_gnark_ffi::proof::{Groth16Bn254Proof, PlonkBn254Proof};
-use sp1_recursion_gnark_ffi::{groth16_bn254::Groth16Bn254Prover, plonk_bn254::PlonkBn254Prover};
+use sp1_recursion_gnark_ffi::{
+    groth16_bn254::Groth16Bn254Prover, plonk_bn254::PlonkBn254Prover, SectWitness,
+    SectWitnessGenerator,
+};
 use sp1_stark::{
     baby_bear_poseidon2::BabyBearPoseidon2,
     shape::{OrderedShape, Shape},
@@ -1043,6 +1046,38 @@ impl<C: SP1ProverComponents> SP1Prover<C> {
         proof
     }
 
+    /// Wrap the STARK proven over sect
+    /// Takes STARK proof and dumps witness satisfying the R1CS representing stark verifier in
+    /// file `~/.sp1/circuits/r1cs_to_dvsnark`
+    #[instrument(name = "wrap_sect", level = "info", skip_all)]
+    pub fn wrap_sect(&self, proof: SP1ReduceProof<OuterSC>, build_dir: &Path) -> SectWitness {
+        let input = SP1CompressWitnessValues {
+            vks_and_proofs: vec![(proof.vk.clone(), proof.proof.clone())],
+            is_complete: true,
+        };
+        let vkey_hash = sp1_vkey_digest_bn254(&proof);
+        let committed_values_digest = sp1_committed_values_digest_bn254(&proof);
+
+        let mut witness = Witness::default();
+        input.write(&mut witness);
+        witness.write_committed_values_digest(committed_values_digest);
+        witness.write_vkey_hash(vkey_hash);
+
+        tracing::info!("vkey_hash {:?}", vkey_hash);
+        tracing::info!("committed_values_digest {:?}", committed_values_digest);
+        let prover = SectWitnessGenerator {};
+        prover.prove(witness, build_dir.to_path_buf())
+
+        // omit verifying as we haven't generated proof
+        // Verify the proof.
+        // prover.verify(
+        //     &proof,
+        //     &vkey_hash.as_canonical_biguint(),
+        //     &committed_values_digest.as_canonical_biguint(),
+        //     build_dir,
+        // );
+    }
+
     pub fn recursion_program(
         &self,
         input: &SP1RecursionWitnessValues<CoreSC>,
@@ -1577,7 +1612,9 @@ pub mod tests {
         let mut bytes = Vec::new();
         file.read_to_end(&mut bytes).unwrap();
 
-        let wrapped_bn254_proof = bincode::deserialize(&bytes).unwrap();
+        let wrapped_bn254_proof: SP1ReduceProof<BabyBearPoseidon2Outer> =
+            bincode::deserialize(&bytes).unwrap();
+        let _ = prover.wrap_vk.set(wrapped_bn254_proof.clone().vk);
 
         if verify {
             tracing::info!("verify wrap bn254");
@@ -1596,6 +1633,7 @@ pub mod tests {
         let vk_digest_bn254 = sp1_vkey_digest_bn254(&wrapped_bn254_proof);
         assert_eq!(vk_digest_bn254, vk.hash_bn254());
 
+        tracing::warn!("vk_digest_bn254 {:?}", vk_digest_bn254);
         tracing::info!("Test the outer Plonk circuit");
         let (constraints, witness) =
             build_constraints_and_witness(&wrapped_bn254_proof.vk, &wrapped_bn254_proof.proof);

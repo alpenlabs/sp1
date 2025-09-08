@@ -4870,21 +4870,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "p3-bn254-fr"
-version = "0.2.3-succinct"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c0dd4d095d254783098bd09fc5fdf33fd781a1be54608ab93cb3ed4bd723da54"
-dependencies = [
- "ff 0.13.1",
- "num-bigint 0.4.6",
- "p3-field",
- "p3-poseidon2",
- "p3-symmetric",
- "rand 0.8.5",
- "serde",
-]
-
-[[package]]
 name = "p3-challenger"
 version = "0.2.3-succinct"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4937,6 +4922,17 @@ dependencies = [
  "p3-util",
  "rand 0.8.5",
  "serde",
+]
+
+[[package]]
+name = "p3-field-testing"
+version = "0.2.3-succinct"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4bb80c3a5f65481a39aa7ce9190e02f03ce49236d2dc9e630159edd2c54bf9f6"
+dependencies = [
+ "criterion",
+ "p3-field",
+ "rand 0.8.5",
 ]
 
 [[package]]
@@ -5051,6 +5047,25 @@ dependencies = [
  "p3-symmetric",
  "rand 0.8.5",
  "serde",
+]
+
+[[package]]
+name = "p3-sect-fr"
+version = "5.2.1"
+dependencies = [
+ "ark-ff 0.4.2",
+ "ff 0.13.1",
+ "lazy_static",
+ "num-bigint 0.4.6",
+ "num-traits",
+ "p3-field",
+ "p3-field-testing",
+ "p3-poseidon2",
+ "p3-symmetric",
+ "rand 0.8.5",
+ "serde",
+ "serde_json",
+ "zkhash",
 ]
 
 [[package]]
@@ -7216,11 +7231,11 @@ dependencies = [
  "lru",
  "num-bigint 0.4.6",
  "p3-baby-bear",
- "p3-bn254-fr",
  "p3-challenger",
  "p3-commit",
  "p3-field",
  "p3-matrix",
+ "p3-sect-fr",
  "p3-symmetric",
  "p3-util",
  "rayon",
@@ -7253,7 +7268,6 @@ dependencies = [
  "num-traits",
  "p3-air",
  "p3-baby-bear",
- "p3-bn254-fr",
  "p3-challenger",
  "p3-commit",
  "p3-dft",
@@ -7262,6 +7276,7 @@ dependencies = [
  "p3-matrix",
  "p3-merkle-tree",
  "p3-poseidon2",
+ "p3-sect-fr",
  "p3-symmetric",
  "p3-uni-stark",
  "p3-util",
@@ -7289,11 +7304,11 @@ dependencies = [
  "criterion",
  "itertools 0.13.0",
  "p3-baby-bear",
- "p3-bn254-fr",
  "p3-challenger",
  "p3-dft",
  "p3-field",
  "p3-merkle-tree",
+ "p3-sect-fr",
  "p3-symmetric",
  "rand 0.8.5",
  "serde",
@@ -7321,7 +7336,6 @@ dependencies = [
  "num_cpus",
  "p3-air",
  "p3-baby-bear",
- "p3-bn254-fr",
  "p3-challenger",
  "p3-commit",
  "p3-dft",
@@ -7331,6 +7345,7 @@ dependencies = [
  "p3-maybe-rayon",
  "p3-merkle-tree",
  "p3-poseidon2",
+ "p3-sect-fr",
  "p3-symmetric",
  "p3-util",
  "pathdiff",

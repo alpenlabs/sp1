@@ -571,7 +571,6 @@ impl From<RiscvAirDiscriminants> for RiscvAirId {
 
 #[cfg(test)]
 #[allow(non_snake_case)]
-#[allow(clippy::print_stdout)]
 pub mod tests {
 
     use crate::{

@@ -1,6 +1,6 @@
 use crate::{Groth16Bn254Proof, PlonkBn254Proof, ProofBn254, SP1_CIRCUIT_VERSION};
 use anyhow::{anyhow, Result};
-use std::{io::Write, process::Command};
+use std::{fs::File, io::Write, process::Command};
 
 /// Represents the proof system being used
 enum ProofSystem {
@@ -30,6 +30,7 @@ fn assert_docker() {
     }
 }
 
+#[allow(dead_code)]
 fn get_docker_image() -> String {
     std::env::var("SP1_GNARK_IMAGE")
         .unwrap_or_else(|_| format!("ghcr.io/succinctlabs/sp1-gnark:{SP1_CIRCUIT_VERSION}"))
@@ -40,16 +41,43 @@ fn get_docker_image() -> String {
 /// Note: files created here by `call_docker` are read-only for after the process exits.
 /// To fix this, manually set the docker user to the current user by supplying a `-u` flag.
 fn call_docker(args: &[&str], mounts: &[(&str, &str)]) -> Result<()> {
+    tracing::info!("Calling docer {:?}", args);
     tracing::info!("Running {} in docker", args[0]);
     let mut cmd = Command::new("docker");
-    cmd.args(["run", "--rm"]);
+    cmd.args(["run"]);
     for (src, dest) in mounts {
         cmd.arg("-v").arg(format!("{src}:{dest}"));
     }
-    cmd.arg(get_docker_image());
+
+    let home = std::env::home_dir().expect("Failed to find the home directory.");
+    let circuits_dir = home.join(".sp1/circuits");
+    let r1cs_to_dvsnark_path = circuits_dir.join("r1cs_to_dvsnark"); // r1cs dump export to dv-pari
+    let r1cs_cached_path = circuits_dir.join("r1cs_cached"); // r1cs dump gnark format
+    let witness_to_dvsnark_path = circuits_dir.join("witness_to_dvsnark"); // witness dump export to dv-pari
+
+    let paths_to_create = [&r1cs_to_dvsnark_path, &r1cs_cached_path, &witness_to_dvsnark_path];
+
+    // Iterate over the paths and create a file if it doesn't exist.
+    for path in &paths_to_create {
+        if !path.exists() {
+            // File::create will create the file or truncate it if it exists.
+            // Since we check for existence first, it will only create it.
+            File::create(path)?;
+            tracing::info!("Created file: {:?}", path);
+        }
+    }
+
+    cmd.arg("-v").arg(format!("{}:{}", r1cs_to_dvsnark_path.to_string_lossy(), "/r1cs_to_dvsnark"));
+    cmd.arg("-v").arg(format!("{}:{}", r1cs_cached_path.to_string_lossy(), "/r1cs_cached"));
+    cmd.arg("-v").arg(format!(
+        "{}:{}",
+        witness_to_dvsnark_path.to_string_lossy(),
+        "/witness_to_dvsnark"
+    ));
+
+    cmd.arg("sp1-gnark:latest"); // custom sp1-gnark docker image to dump r1cs and witness required by dv-pari
     cmd.args(args);
-    cmd.stdout(std::process::Stdio::piped());
-    cmd.stderr(std::process::Stdio::piped());
+    tracing::info!("Command {:?}", cmd);
     let result = cmd.output()?;
     if !result.status.success() {
         let stderr = String::from_utf8_lossy(&result.stderr);
@@ -98,6 +126,10 @@ pub fn prove_groth16_bn254(data_dir: &str, witness_path: &str) -> Groth16Bn254Pr
         ProofBn254::Groth16(proof) => proof,
         _ => panic!("unexpected proof type"),
     }
+}
+
+pub fn prove_witness_sect(data_dir: &str, witness_path: &str) {
+    let _ = prove(ProofSystem::Groth16, data_dir, witness_path);
 }
 
 fn build(system: ProofSystem, data_dir: &str) -> Result<()> {

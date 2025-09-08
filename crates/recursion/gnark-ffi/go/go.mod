@@ -1,6 +1,6 @@
 module github.com/succinctlabs/sp1-recursion-gnark
 
-go 1.22.0
+go 1.23.0
 
 require (
 	github.com/consensys/gnark v0.10.1-0.20240504023521-d9bfacd7cb60
@@ -32,4 +32,6 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-replace github.com/consensys/gnark => github.com/jtguibas/gnark v0.0.0-20240923234830-41125bc1909c
+replace github.com/consensys/gnark => github.com/alpenlabs/gnark v0.0.0-20250707125522-2d480d810efb
+
+replace github.com/consensys/gnark-crypto => github.com/alpenlabs/gnark-crypto v0.0.0-20250521035818-134953372b00

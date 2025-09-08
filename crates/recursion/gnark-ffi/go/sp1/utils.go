@@ -68,10 +68,10 @@ func NewCircuit(witnessInput WitnessInput) Circuit {
 		exts[i] = babybear.NewE(witnessInput.Exts[i])
 	}
 	return Circuit{
-		VkeyHash:             witnessInput.VkeyHash,
+		VkeyHash:              witnessInput.VkeyHash,
 		CommittedValuesDigest: witnessInput.CommittedValuesDigest,
-		Vars:                 vars,
-		Felts:                felts,
-		Exts:                 exts,
+		Vars:                  vars,
+		Felts:                 felts,
+		Exts:                  exts,
 	}
 }
