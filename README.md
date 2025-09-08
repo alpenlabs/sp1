@@ -57,6 +57,6 @@ Generating proof requires around 8 GB of docker memory.
 
 ## Versioning
 
-SP1 Fork is forked off of v5.0.0 fork from main branch.
+SP1 Fork is forked off of v5.2.1 fork from main branch.
 
 Our main branch is `alpen_dev`.
