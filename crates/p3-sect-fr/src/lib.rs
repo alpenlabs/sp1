@@ -1,3 +1,5 @@
+#![allow(unexpected_cfgs)]
+#![allow(non_local_definitions)]
 /// This library references p3-bn254-fr 0.2.2-succinct
 /// https://docs.rs/crate/p3-bn254-fr/0.2.3-succinct/source/src/lib.rs
 ///

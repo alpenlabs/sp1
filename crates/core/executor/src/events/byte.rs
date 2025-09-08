@@ -90,6 +90,7 @@ pub trait ByteRecord {
     }
 
     /// Adds `ByteLookupEvent`s to verify that all the bytes in the input slice are indeed bytes.
+    #[allow(clippy::needless_for_each)]
     fn add_u16_range_checks(&mut self, ls: &[u16]) {
         ls.iter().for_each(|x| self.add_u16_range_check(*x));
     }

@@ -161,7 +161,7 @@ impl CpuProver {
                     public_values,
                     self.version().to_string(),
                 ));
-            };
+            }
             // return public_values as well so that it can be returned alongside wrapped proof
             (reduce_proof, public_values)
         };

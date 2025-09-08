@@ -2199,6 +2199,7 @@ impl<'a> Executor<'a> {
                             .push(MemoryInitializeFinalizeEvent::initialize(addr, *initial_value));
                     }
 
+                    #[allow(clippy::unnecessary_unwrap)]
                     let record = *record.unwrap();
                     memory_finalize_events
                         .push(MemoryInitializeFinalizeEvent::finalize_from_record(addr, &record));
