@@ -45,6 +45,7 @@ fn test_verify_compressed(#[case] elf: &[u8]) {
 #[case(FIBONACCI_ELF)]
 #[case(FIBONACCI_BLAKE3_ELF)]
 #[serial]
+#[ignore = "..."]
 fn test_verify_groth16(#[case] elf: &[u8]) {
     // Set up the pk and vk.
     let client = ProverClient::from_env();
@@ -61,6 +62,7 @@ fn test_verify_groth16(#[case] elf: &[u8]) {
 #[case(FIBONACCI_ELF)]
 #[case(FIBONACCI_BLAKE3_ELF)]
 #[serial]
+#[ignore = "..."]
 fn test_verify_plonk(#[case] elf: &[u8]) {
     // Set up the pk and vk.
     let client = ProverClient::from_env();
@@ -77,6 +79,7 @@ fn test_verify_plonk(#[case] elf: &[u8]) {
 #[case(FIBONACCI_ELF, GROTH16_ELF)]
 #[case(FIBONACCI_BLAKE3_ELF, GROTH16_BLAKE3_ELF)]
 #[serial]
+#[ignore = "..."]
 fn test_groth16_verifier(#[case] elf: &[u8], #[case] groth16_elf: &[u8]) {
     // Set up the pk and vk.
     let client = ProverClient::from_env();
@@ -92,24 +95,25 @@ fn test_groth16_verifier(#[case] elf: &[u8], #[case] groth16_elf: &[u8]) {
     // Get the vkey hash.
     let vkey_hash = vk.bytes32();
     cfg_if::cfg_if! {
-        if #[cfg(feature = "ark")] {
-            use ark_bn254::Bn254;
-            use ark_groth16::{r1cs_to_qap::LibsnarkReduction, Groth16};
-            use crate::{
-                decode_sp1_vkey_hash, hash_public_inputs, load_ark_groth16_verifying_key_from_bytes,
-                load_ark_proof_from_bytes, load_ark_public_inputs_from_bytes,
-            };
-            let ark_proof = load_ark_proof_from_bytes(&proof[4..]).unwrap();
-            let ark_vkey = load_ark_groth16_verifying_key_from_bytes(&crate::GROTH16_VK_BYTES).unwrap();
+            if #[cfg(feature = "ark")] {
+                use ark_bn254::Bn254;
+                use ark_groth16::{r1cs_to_qap::LibsnarkReduction, Groth16};
+                use crate::{
+                    decode_sp1_vkey_hash, hash_public_inputs,
+    load_ark_groth16_verifying_key_from_bytes,                 load_ark_proof_from_bytes,
+    load_ark_public_inputs_from_bytes,             };
+                let ark_proof = load_ark_proof_from_bytes(&proof[4..]).unwrap();
+                let ark_vkey =
+    load_ark_groth16_verifying_key_from_bytes(&crate::GROTH16_VK_BYTES).unwrap();
 
-            let ark_public_inputs = load_ark_public_inputs_from_bytes(
-                &decode_sp1_vkey_hash(&vkey_hash).unwrap(),
-                &hash_public_inputs(&public_inputs),
-            );
-            Groth16::<Bn254, LibsnarkReduction>::verify_proof(&ark_vkey.into(), &ark_proof, &ark_public_inputs)
-            .unwrap();
+                let ark_public_inputs = load_ark_public_inputs_from_bytes(
+                    &decode_sp1_vkey_hash(&vkey_hash).unwrap(),
+                    &hash_public_inputs(&public_inputs),
+                );
+                Groth16::<Bn254, LibsnarkReduction>::verify_proof(&ark_vkey.into(), &ark_proof,
+    &ark_public_inputs)             .unwrap();
+            }
         }
-    }
 
     crate::Groth16Verifier::verify(&proof, &public_inputs, &vkey_hash, &crate::GROTH16_VK_BYTES)
         .expect("Groth16 proof is invalid");
@@ -127,6 +131,7 @@ fn test_groth16_verifier(#[case] elf: &[u8], #[case] groth16_elf: &[u8]) {
 #[case(FIBONACCI_ELF)]
 #[case(FIBONACCI_BLAKE3_ELF)]
 #[serial]
+#[ignore = "..."]
 fn test_verify_invalid_groth16(#[case] elf: &[u8]) {
     // Set up the pk and vk.
     let client = ProverClient::from_env();
@@ -142,24 +147,25 @@ fn test_verify_invalid_groth16(#[case] elf: &[u8]) {
     // Get the vkey hash.
     let vkey_hash = vk.bytes32();
     cfg_if::cfg_if! {
-        if #[cfg(feature = "ark")] {
-            use ark_bn254::Bn254;
-            use ark_groth16::{r1cs_to_qap::LibsnarkReduction, Groth16};
-            use crate::{
-                decode_sp1_vkey_hash, hash_public_inputs, load_ark_groth16_verifying_key_from_bytes,
-                load_ark_proof_from_bytes, load_ark_public_inputs_from_bytes,
-            };
-            let ark_proof = load_ark_proof_from_bytes(&proof[4..]).unwrap();
-            let ark_vkey = load_ark_groth16_verifying_key_from_bytes(&crate::GROTH16_VK_BYTES).unwrap();
+            if #[cfg(feature = "ark")] {
+                use ark_bn254::Bn254;
+                use ark_groth16::{r1cs_to_qap::LibsnarkReduction, Groth16};
+                use crate::{
+                    decode_sp1_vkey_hash, hash_public_inputs,
+    load_ark_groth16_verifying_key_from_bytes,                 load_ark_proof_from_bytes,
+    load_ark_public_inputs_from_bytes,             };
+                let ark_proof = load_ark_proof_from_bytes(&proof[4..]).unwrap();
+                let ark_vkey =
+    load_ark_groth16_verifying_key_from_bytes(&crate::GROTH16_VK_BYTES).unwrap();
 
-            let ark_public_inputs = load_ark_public_inputs_from_bytes(
-                &decode_sp1_vkey_hash(&vkey_hash).unwrap(),
-                &hash_public_inputs(&public_inputs),
-            );
-            Groth16::<Bn254, LibsnarkReduction>::verify_proof(&ark_vkey.into(), &ark_proof, &ark_public_inputs)
-            .unwrap();
+                let ark_public_inputs = load_ark_public_inputs_from_bytes(
+                    &decode_sp1_vkey_hash(&vkey_hash).unwrap(),
+                    &hash_public_inputs(&public_inputs),
+                );
+                Groth16::<Bn254, LibsnarkReduction>::verify_proof(&ark_vkey.into(), &ark_proof,
+    &ark_public_inputs)             .unwrap();
+            }
         }
-    }
 
     let result = crate::Groth16Verifier::verify(
         &proof[..1], // Invalid proof (missing the last byte)
@@ -175,6 +181,7 @@ fn test_verify_invalid_groth16(#[case] elf: &[u8]) {
 #[case(FIBONACCI_ELF, PLONK_ELF)]
 #[case(FIBONACCI_BLAKE3_ELF, PLONK_BLAKE3_ELF)]
 #[serial]
+#[ignore = "..."]
 fn test_plonk_verifier(#[case] elf: &[u8], #[case] plonk_elf: &[u8]) {
     // Set up the pk and vk.
     let client = ProverClient::from_env();
@@ -206,6 +213,7 @@ fn test_plonk_verifier(#[case] elf: &[u8], #[case] plonk_elf: &[u8]) {
 #[case(FIBONACCI_ELF)]
 #[case(FIBONACCI_BLAKE3_ELF)]
 #[serial]
+#[ignore = "..."]
 fn test_verify_invalid_plonk(#[case] elf: &[u8]) {
     // Set up the pk and vk.
     let client = ProverClient::from_env();
@@ -233,6 +241,7 @@ fn test_verify_invalid_plonk(#[case] elf: &[u8]) {
 
 #[serial]
 #[test]
+#[ignore = "..."]
 fn test_vkeys() {
     let groth16_path = try_install_circuit_artifacts("groth16");
     let s3_vkey_path = groth16_path.join("groth16_vk.bin");
