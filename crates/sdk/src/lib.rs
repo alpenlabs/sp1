@@ -69,7 +69,10 @@ pub use utils::setup_logger;
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use ark_serialize::CanonicalSerialize;
+    use num_bigint::BigUint;
     use sp1_primitives::io::SP1PublicValues;
 
     use crate::{utils, Prover, ProverClient, SP1Stdin};
@@ -192,8 +195,28 @@ mod tests {
         let mut ark_vkey_bytes = vec![];
         ark_vkey.serialize_compressed(&mut ark_vkey_bytes).unwrap();
 
-        tracing::info!("ark_proof_bytes {:?}", ark_proof_bytes);
-        tracing::info!("ark_vkey_bytes {:?}", ark_vkey_bytes);
+        let pvk: ark_groth16::PreparedVerifyingKey<ark_bn254::Bn254> = ark_vkey.clone().into();
+        let public_inputs = match proof.proof {
+            sp1_stark::SP1Proof::Groth16(gproof) => {
+                let expected_vk_hash = BigUint::from_str(&gproof.public_inputs[0]).unwrap();
+                let expected_public_values_hash =
+                    BigUint::from_str(&gproof.public_inputs[1]).unwrap();
+                [expected_vk_hash.into(), expected_public_values_hash.into()]
+            }
+            _ => panic!(),
+        };
+
+        let verified = ark_groth16::Groth16::<ark_bn254::Bn254>::verify_proof(
+            &pvk,
+            &ark_proof,
+            &public_inputs,
+        )
+        .unwrap();
+        assert!(verified);
+
+        tracing::info!("groth16 public inputs {:?}", public_inputs);
+        tracing::info!("groth16 proof {:?}", ark_proof);
+        tracing::info!("groth16 vk {:?}", ark_vkey);
     }
 
     #[test]

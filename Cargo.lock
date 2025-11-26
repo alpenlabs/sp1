@@ -7364,6 +7364,7 @@ dependencies = [
  "indicatif",
  "itertools 0.13.0",
  "k256",
+ "num-bigint 0.4.6",
  "p3-baby-bear",
  "p3-field",
  "p3-fri",

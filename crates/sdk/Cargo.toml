@@ -73,6 +73,7 @@ sp1-verifier = { path = "../verifier", features = ["ark"] }
 ark-groth16 = { version = "0.5.0" }
 ark-bn254 = { version = "0.5.0" }
 ark-serialize = { version = "0.5.0" }
+num-bigint = "0.4.6"
 
 [features]
 default = ["network", "reserved-capacity"]
