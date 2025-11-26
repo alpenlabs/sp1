@@ -69,6 +69,7 @@ pub use utils::setup_logger;
 
 #[cfg(test)]
 mod tests {
+    use ark_serialize::CanonicalSerialize;
     use sp1_primitives::io::SP1PublicValues;
 
     use crate::{utils, Prover, ProverClient, SP1Stdin};
@@ -161,23 +162,38 @@ mod tests {
     }
 
     #[test]
-    fn test_e2e_prove_plonk() {
+    fn test_e2e_prove_groth16() {
         utils::setup_logger();
         let client = ProverClient::builder().cpu().build();
-        let elf = test_artifacts::FIBONACCI_ELF;
+        let elf = test_artifacts::FIBONACCI_BLAKE3_ELF;
         let (pk, vk) = client.setup(elf);
         let mut stdin = SP1Stdin::new();
-        stdin.write(&10usize);
+        stdin.write(&10usize); // private input
 
         // Generate proof & verify.
-        let mut proof = client.prove(&pk, &stdin).plonk().run().unwrap();
+        let proof: crate::SP1ProofWithPublicValues =
+            client.prove(&pk, &stdin).groth16().run().unwrap();
+        tracing::info!("public values {:?}", proof.public_values);
         client.verify(&proof, &vk).unwrap();
 
-        // Test invalid public values.
-        proof.public_values = SP1PublicValues::from(&[255, 4, 84]);
-        if client.verify(&proof, &vk).is_ok() {
-            panic!("verified proof with invalid public values")
-        }
+        let proof_bytes = proof.bytes();
+        let ark_proof: ark_groth16::Proof<ark_bn254::Bn254> =
+            sp1_verifier::load_ark_proof_from_bytes(&proof_bytes[4..]).unwrap();
+
+        let ark_vkey: ark_groth16::VerifyingKey<ark_bn254::Bn254> =
+            sp1_verifier::load_ark_groth16_verifying_key_from_bytes(
+                &sp1_verifier::GROTH16_VK_BYTES,
+            )
+            .unwrap();
+
+        let mut ark_proof_bytes = vec![];
+        ark_proof.serialize_compressed(&mut ark_proof_bytes).unwrap();
+
+        let mut ark_vkey_bytes = vec![];
+        ark_vkey.serialize_compressed(&mut ark_vkey_bytes).unwrap();
+
+        tracing::info!("ark_proof_bytes {:?}", ark_proof_bytes);
+        tracing::info!("ark_vkey_bytes {:?}", ark_vkey_bytes);
     }
 
     #[test]

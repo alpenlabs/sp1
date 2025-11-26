@@ -13,16 +13,21 @@ pub fn main() {
     //
     // Behind the scenes, this compiles down to a system call which handles reading inputs
     // from the prover.
-    let n = 10;
+    let n: u32 = sp1_zkvm::io::read();
     // Compute the n'th fibonacci number, using normal Rust code.
-    let mut a = 0;
-    let mut b = 1;
+    let mut a: u32 = 0;
+    let mut b: u32 = 1;
+
+    let mut cs: Vec<u32> = vec![];
     for _ in 0..n {
         let mut c = a + b;
         c %= 7919; // Modulus to prevent overflow.
         a = b;
         b = c;
+        cs.push(c);
     }
+    cs = cs[cs.len() - 8..].to_vec();
+    let cs: [u32; 8] = cs.try_into().unwrap();
     sp1_zkvm::io::commit(&a);
-    sp1_zkvm::io::commit(&b);
+    sp1_zkvm::io::commit(&cs);
 }
