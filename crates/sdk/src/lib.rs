@@ -164,59 +164,84 @@ mod tests {
         }
     }
 
+    // RUST_LOG=info cargo test --release --package sp1-sdk --lib -- tests::test_e2e_prove_groth16
+    // --exact --nocapture
     #[test]
     fn test_e2e_prove_groth16() {
+        use p3_field::PrimeField;
         utils::setup_logger();
+        use sp1_prover::HashableKey;
+
         let client = ProverClient::builder().cpu().build();
         let elf = test_artifacts::FIBONACCI_BLAKE3_ELF;
         let (pk, vk) = client.setup(elf);
+        // This is as far as we go during compile time
+        // With these we can obtain groth16 verifying key and SP1_VKEY_HASH
+        // Since our groth16 verifier remains same for any program statement,
+        // groth16 vkey is constant and is present in sp1_verifier::GROTH16_VK_BYTES
+        // while SP1 VKEY depends upon program statement and can be computed using
+        let sp1_vkey_hash = pk.vk.hash_bn254().as_canonical_biguint();
+
+        tracing::info!("sp1_vkey_hash {:?}", sp1_vkey_hash);
+        // Private Inputs; doesn't matter for the verifier
         let mut stdin = SP1Stdin::new();
-        stdin.write(&10usize); // private input
+        stdin.write(&10usize);
 
         // Generate proof & verify.
         let proof: crate::SP1ProofWithPublicValues =
             client.prove(&pk, &stdin).groth16().run().unwrap();
-        tracing::info!("public values {:?}", proof.public_values);
+        tracing::info!("sp1 raw public values {:?}", proof.public_values);
+        // Note SP1 public values and raw public values are different; SP1_pub = hash_fr(raw_pub)
         client.verify(&proof, &vk).unwrap();
 
-        let proof_bytes = proof.bytes();
-        let ark_proof: ark_groth16::Proof<ark_bn254::Bn254> =
-            sp1_verifier::load_ark_proof_from_bytes(&proof_bytes[4..]).unwrap();
+        let proof_bytes = proof.bytes(); // first 4 bytes of proof here is from groth16_vkey_hash
 
-        let ark_vkey: ark_groth16::VerifyingKey<ark_bn254::Bn254> =
-            sp1_verifier::load_ark_groth16_verifying_key_from_bytes(
-                &sp1_verifier::GROTH16_VK_BYTES,
+        use zkaleido_sp1_groth16_verifier::Groth16Proof;
+        let gnark_groth16_proof = Groth16Proof::from_uncompressed_bytes(&proof_bytes[4..]).unwrap();
+        let gnark_compressed_bytes: [u8; _] = gnark_groth16_proof.to_gnark_compressed_bytes();
+        tracing::info!("gnark compressed proof bytes {:?}", gnark_compressed_bytes);
+
+        // same uncompressed proof bytes can also be presented as ark proof
+        // In this block we verify proof with ark-groth16
+        {
+            let ark_proof: ark_groth16::Proof<ark_bn254::Bn254> =
+                sp1_verifier::load_ark_proof_from_bytes(&proof_bytes[4..]).unwrap();
+
+            let ark_vkey: ark_groth16::VerifyingKey<ark_bn254::Bn254> =
+                sp1_verifier::load_ark_groth16_verifying_key_from_bytes(
+                    &sp1_verifier::GROTH16_VK_BYTES,
+                )
+                .unwrap();
+
+            let mut ark_proof_bytes = vec![];
+            ark_proof.serialize_compressed(&mut ark_proof_bytes).unwrap();
+
+            tracing::info!("ark proof bytes {:?}", &ark_proof_bytes);
+
+            let mut ark_vkey_bytes = vec![];
+            ark_vkey.serialize_compressed(&mut ark_vkey_bytes).unwrap();
+
+            let pvk: ark_groth16::PreparedVerifyingKey<ark_bn254::Bn254> = ark_vkey.clone().into();
+            let public_inputs = match proof.proof {
+                sp1_stark::SP1Proof::Groth16(gproof) => {
+                    let expected_vk_hash = BigUint::from_str(&gproof.public_inputs[0]).unwrap();
+                    assert_eq!(sp1_vkey_hash, expected_vk_hash);
+                    let expected_public_values_hash =
+                        BigUint::from_str(&gproof.public_inputs[1]).unwrap();
+                    [expected_vk_hash.into(), expected_public_values_hash.into()]
+                }
+                _ => panic!(),
+            };
+
+            let verified = ark_groth16::Groth16::<ark_bn254::Bn254>::verify_proof(
+                &pvk,
+                &ark_proof,
+                &public_inputs,
             )
             .unwrap();
-
-        let mut ark_proof_bytes = vec![];
-        ark_proof.serialize_compressed(&mut ark_proof_bytes).unwrap();
-
-        let mut ark_vkey_bytes = vec![];
-        ark_vkey.serialize_compressed(&mut ark_vkey_bytes).unwrap();
-
-        let pvk: ark_groth16::PreparedVerifyingKey<ark_bn254::Bn254> = ark_vkey.clone().into();
-        let public_inputs = match proof.proof {
-            sp1_stark::SP1Proof::Groth16(gproof) => {
-                let expected_vk_hash = BigUint::from_str(&gproof.public_inputs[0]).unwrap();
-                let expected_public_values_hash =
-                    BigUint::from_str(&gproof.public_inputs[1]).unwrap();
-                [expected_vk_hash.into(), expected_public_values_hash.into()]
-            }
-            _ => panic!(),
-        };
-
-        let verified = ark_groth16::Groth16::<ark_bn254::Bn254>::verify_proof(
-            &pvk,
-            &ark_proof,
-            &public_inputs,
-        )
-        .unwrap();
-        assert!(verified);
-
-        tracing::info!("groth16 public inputs {:?}", public_inputs);
-        tracing::info!("groth16 proof {:?}", ark_proof);
-        tracing::info!("groth16 vk {:?}", ark_vkey);
+            assert!(verified);
+            tracing::info!("ark format groth16 vk {:?}", ark_vkey_bytes);
+        }
     }
 
     #[test]

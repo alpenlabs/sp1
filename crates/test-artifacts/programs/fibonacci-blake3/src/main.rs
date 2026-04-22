@@ -28,6 +28,7 @@ pub fn main() {
     }
     cs = cs[cs.len() - 8..].to_vec();
     let cs: [u32; 8] = cs.try_into().unwrap();
+    // 36 bytes of public input committed here
     sp1_zkvm::io::commit(&a);
     sp1_zkvm::io::commit(&cs);
 }
